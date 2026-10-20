@@ -126,13 +126,27 @@ def load_sprites(taille):
     for k in range(len(touffes)):
         x, y, largeur, hauteur = touffes[k]
         sprites["touffe" + str(k)] = decouper_hauteur(plantes_sans_ombre, x, y, largeur, hauteur, hauteur * 2)
-    # Decor garde : totem, tonneau, tombe, caisses de decor, et la porte de sortie.
+    # Arbres (feuille des plantes, sans ombre : la GUI dessine leur ombre).
+    sprites["arbre1"] = decouper_hauteur(plantes_sans_ombre, 24, 14, 114, 142, taille * 3)
+    sprites["arbre2"] = decouper_hauteur(plantes_sans_ombre, 160, 16, 100, 140, taille * 3)
+    sprites["arbre3"] = decouper_hauteur(plantes_sans_ombre, 292, 28, 84, 126, taille * 5 // 2)
+
+    # Decor (feuille "avec ombres") et la porte de sortie.
     # (rectangles trouves en regardant les feuilles, hauteur voulue ensuite ; les proportions sont gardees)
     sprites["totem"] = decouper_hauteur(props_ombres, 348, 170, 44, 90, taille * 2)
     sprites["tonneau"] = decouper_hauteur(props_ombres, 160, 150, 36, 42, taille)
-    sprites["tombe"] = decouper_hauteur(props_ombres, 222, 236, 40, 48, taille)
-    sprites["caisses"] = decouper_hauteur(props_ombres, 158, 16, 40, 54, taille * 3 // 2)
-    sprites["caisse_petite"] = decouper_hauteur(props_ombres, 161, 84, 32, 44, taille)
+    sprites["statue"] = decouper_hauteur(props_ombres, 440, 16, 48, 80, taille * 2)
+    sprites["banc"] = decouper_hauteur(props_ombres, 288, 16, 64, 48, taille)
+    sprites["coffre"] = decouper_hauteur(props_ombres, 96, 26, 36, 38, taille)
+    sprites["panneau"] = decouper_hauteur(props_ombres, 96, 160, 34, 34, taille)
+    sprites["vase"] = decouper_hauteur(props_ombres, 160, 214, 32, 40, taille)
+    sprites["pot"] = decouper_hauteur(props_ombres, 160, 284, 32, 34, taille * 3 // 4)
+    sprites["vase2"] = decouper_hauteur(props_ombres, 160, 344, 32, 42, taille)
+    sprites["rocher"] = decouper_hauteur(props_ombres, 0, 426, 64, 52, taille * 5 // 4)
+    sprites["caillou"] = decouper_hauteur(props_ombres, 128, 476, 34, 32, taille * 2 // 3)
+    sprites["caillou2"] = decouper_hauteur(props_ombres, 66, 480, 28, 26, taille // 2)
+    sprites["pilier_casse"] = decouper_hauteur(props_ombres, 414, 190, 36, 62, taille * 3 // 2)
+    sprites["lanterne"] = decouper_hauteur(props_ombres, 448, 114, 32, 44, taille)
     sprites["porte"] = decouper_hauteur(props_ombres, 27, 101, 42, 54, taille * 5 // 4)   # sortie du niveau
     sprites["porte_ouverte"] = decouper_hauteur(props_ombres, 27, 164, 42, 58, taille * 5 // 4)
 

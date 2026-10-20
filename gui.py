@@ -75,6 +75,9 @@ class Game:
 
         # Les sprites se chargent apres set_mode.
         self.sprites = load_sprites(TAILLE)
+        # Ellipse noire transparente, agrandie ou reduite pour faire les ombres au sol (voir dessiner_ombre).
+        self.image_ombre = pygame.Surface((60, 20), pygame.SRCALPHA)
+        pygame.draw.ellipse(self.image_ombre, (0, 0, 0, 70), (0, 0, 60, 20))
         self.polices = {}     # polices deja creees, rangees par taille (voir ecrire)
 
         # Sons : dictionnaire vide si l'ordinateur n'a pas de carte son (le jeu marche quand meme).
@@ -121,6 +124,7 @@ class Game:
         # Position du coin haut gauche du niveau dans la zone de jeu, en cases (niveau centre).
         self.decalage_colonne = (self.cases_largeur - len(self.etat.grid[0])) // 2
         self.decalage_ligne = (self.cases_hauteur - len(self.etat.grid)) // 2
+        self.preparer_fond()
         # Phase : "menu" (choix du niveau), "jeu", puis la fin de niveau : "ouverture" (porte + lumiere),
         # "marche" et "queue" (le chat va a la porte), "bravo" (pancarte), "glisse" (vers le niveau suivant).
         self.phase = "jeu"
@@ -467,57 +471,86 @@ class Game:
             return False
         return grille[r][c] == "O" and self.touche_le_sol(r, c)
 
-    def poser(self, nom, wr, wc):
-        # Pose un objet du decor dans la case (wr, wc) de la zone de jeu, les pieds en bas de la case.
-        # On ne pose rien si la case est occupee (ou, pour un objet haut, si la case au-dessus l'est).
+    def poser(self, nom, wr, wc, ombre=False):
+        # Pose un objet du decor, les pieds en bas de la case (wr, wc) de la zone de jeu, centre sur la colonne.
+        # On verifie TOUTES les cases que l'image recouvre : si l'une touche le niveau ou un autre objet,
+        # on ne pose rien. Ainsi le meme decor marche pour les petits et les grands niveaux.
+        # ombre : dessine une ombre au sol (pour les arbres, dont l'image n'a pas d'ombre).
         image = self.sprites[nom]
-        if not self.case_libre(wr, wc):
-            return
-        if image.get_height() > TAILLE and not self.case_libre(wr - 1, wc):
-            return
         x = wc * TAILLE + (TAILLE - image.get_width()) // 2
         y = (wr + 1) * TAILLE - image.get_height()
+        cases = []
+        for r in range(y // TAILLE, wr + 1):
+            for c in range(x // TAILLE, (x + image.get_width() - 1) // TAILLE + 1):
+                if r < 0 or c < 0 or r >= self.cases_hauteur or c >= self.cases_largeur:
+                    return
+                if not self.case_libre(r, c) or (r, c) in self.cases_decor:
+                    return
+                cases.append((r, c))
+        for case in cases:
+            self.cases_decor.append(case)
+        if ombre:
+            self.dessiner_ombre(x + image.get_width() // 2, (wr + 1) * TAILLE - 4, image.get_width() * 2 // 3)
         self.monde.blit(image, (x, y))
 
+    def dessiner_ombre(self, centre_x, bas_y, largeur):
+        # Ombre douce au sol : une ellipse noire transparente, centree en centre_x, posee sur bas_y.
+        hauteur = max(4, largeur // 3)
+        ombre = pygame.transform.smoothscale(self.image_ombre, (largeur, hauteur))
+        self.monde.blit(ombre, (centre_x - largeur // 2, bas_y - hauteur // 2))
+
     def dessiner_decor(self):
-        # Decor identique dans tous les niveaux : quelques caisses, 3 tombes alignees,
-        # 3 tonneaux groupes dans un coin et 2 totems contre le mur, de chaque cote de la porte.
-
-        # Caisses de decor : positions donnees par une formule (pas de hasard, le rendu est toujours le meme).
-        for wr in range(1, self.cases_hauteur - 1):
-            for wc in range(1, self.cases_largeur - 1):
-                if (wr * 13 + wc * 7) % 3 == 0:
-                    numero = (wr * 5 + wc * 9) % 30
-                    if numero == 28:
-                        self.poser("caisses", wr, wc)
-                    if numero == 29:
-                        self.poser("caisse_petite", wr, wc)
-
-        # Les tombes et les tonneaux sont poses juste sous le niveau (et pas dans les coins de la fenetre),
-        # pour que les petits niveaux ne soient pas perdus au milieu de l'herbe.
-        grille = self.etat.grid
-        bas = min(self.decalage_ligne + len(grille), self.cases_hauteur - 2)
-        gauche = self.decalage_colonne
-        droite = self.decalage_colonne + len(grille[0]) - 1
-
-        # Trois tombes alignees sous le coin bas gauche du niveau.
-        for k in range(3):
-            self.poser("tombe", bas, gauche + k)
-
-        # Trois tonneaux groupes sous le coin bas droit du niveau.
-        self.poser("tonneau", bas, droite)
-        self.poser("tonneau", bas, droite - 1)
-        self.poser("tonneau", bas - 1, droite + 1)
+        # Decor identique dans tous les niveaux, place par des regles fixes (pas de hasard).
+        # Les objets qui ne tiennent pas (niveau trop grand) ne sont simplement pas poses (voir poser).
+        self.cases_decor = []
+        bas_fenetre = self.cases_hauteur - 2
+        droite_fenetre = self.cases_largeur - 2
 
         # Deux totems poses sur le mur du haut, de chaque cote de la porte (jamais dans le vide).
         # On essaie a 3 cases de la porte, sinon a 2 cases (niveaux etroits).
         if self.porte is not None:
+            # Les cases au-dessus de la porte sont reservees a son arche (dessinee plus tard).
+            for dc in (-1, 0, 1):
+                self.cases_decor.append((self.porte[0] + self.decalage_ligne - 1, self.porte[1] + self.decalage_colonne + dc))
             for sens in (-1, 1):
                 for distance in (3, 2):
                     colonne = self.porte[1] + sens * distance
                     if self.mur_visible(self.porte[0], colonne):
                         self.poser("totem", self.porte[0] + self.decalage_ligne - 1, colonne + self.decalage_colonne)
                         break
+
+        # Sous le niveau : un banc au milieu, des vases a gauche, des tonneaux a droite.
+        grille = self.etat.grid
+        bas = min(self.decalage_ligne + len(grille), bas_fenetre)
+        gauche = self.decalage_colonne
+        droite = self.decalage_colonne + len(grille[0]) - 1
+        self.poser("banc", bas, (gauche + droite) // 2)
+        self.poser("vase", bas, gauche)
+        self.poser("pot", bas, gauche + 1)
+        self.poser("tonneau", bas, droite)
+        self.poser("tonneau", bas, droite - 1)
+        self.poser("tonneau", bas - 1, droite + 1)
+
+        # Un arbre dans chaque coin de la fenetre, puis des objets le long des bords.
+        self.poser("arbre1", 4, 2, True)
+        self.poser("arbre3", 4, droite_fenetre - 1, True)
+        self.poser("arbre2", bas_fenetre, 2, True)
+        self.poser("arbre1", bas_fenetre, droite_fenetre - 1, True)
+        self.poser("statue", 7, 1)
+        self.poser("statue", 7, droite_fenetre)
+        self.poser("lanterne", 9, 1)
+        self.poser("lanterne", 9, droite_fenetre)
+        self.poser("pilier_casse", 3, 5)
+        self.poser("panneau", 2, droite_fenetre - 4)
+        self.poser("coffre", bas_fenetre - 1, droite_fenetre - 3)
+        self.poser("rocher", bas_fenetre - 2, 1)
+        self.poser("vase2", bas_fenetre, 5)
+
+        # Petits cailloux semes dans l'herbe libre (positions donnees par une formule).
+        for wr in range(1, self.cases_hauteur - 1):
+            for wc in range(1, self.cases_largeur - 1):
+                if (wr * 13 + wc * 7) % 11 == 0:
+                    self.poser(["caillou", "caillou2"][(wr + wc) % 2], wr, wc)
 
     def position_porte(self):
         # Coin haut gauche du dessin de la porte (posee sur le bas de sa case de mur) et son sprite.
@@ -557,33 +590,41 @@ class Game:
                     touffe = self.sprites["touffe" + str((r + c) % 5)]
                     self.monde.blit(touffe, (c * TAILLE + TAILLE // 4, r * TAILLE + TAILLE // 2))
 
-    def dessiner_niveau(self):
-        # Dessine tout le niveau sur self.monde : herbe, haie, decor, murs, sol, cibles, caisses, chat, porte.
+    def preparer_fond(self):
+        # Dessine une seule fois, au chargement du niveau, tout ce qui ne bouge jamais :
+        # herbe, haie, decor, murs et sol. A chaque image, on recopie juste ce fond (bien plus rapide).
         grille = self.etat.grid
         self.dessiner_herbe()
         self.dessiner_haie()
         self.dessiner_decor()
+        for r in range(len(grille)):
+            for c in range(len(grille[r])):
+                x, y = self.ecran_case(r, c)
+                if grille[r][c] == "O":
+                    if self.touche_le_sol(r, c):
+                        self.monde.blit(self.sprites["mur" + str(1 + (r + c) % 2)], (x, y))
+                else:
+                    # Toutes les autres cases sont du sol de jeu (dalle de pierre) ; l'herbe reste a l'exterieur.
+                    self.monde.blit(self.sprites["sol" + str(1 + (r * 3 + c * 5) % 2)], (x, y))
+        self.fond = self.monde.copy()
+
+    def dessiner_niveau(self):
+        # Dessine le niveau sur self.monde : le fond tout pret, puis les cibles, la trajectoire,
+        # les caisses, le chat et la porte (ce qui peut changer d'une image a l'autre).
+        grille = self.etat.grid
+        self.monde.blit(self.fond, (0, 0))
 
         for r in range(len(grille)):
             for c in range(len(grille[r])):
                 case = grille[r][c]
-                x = (c + self.decalage_colonne) * TAILLE
-                y = (r + self.decalage_ligne) * TAILLE
-
-                if case == "O":
-                    if self.touche_le_sol(r, c):
-                        self.monde.blit(self.sprites["mur" + str(1 + (r + c) % 2)], (x, y))
-                    continue
-
-                # Toutes les autres cases sont du sol de jeu (dalle de pierre) ; l'herbe reste a l'exterieur.
-                self.monde.blit(self.sprites["sol" + str(1 + (r * 3 + c * 5) % 2)], (x, y))
                 if case == "S" or case == "." or case == "*":
+                    x, y = self.ecran_case(r, c)
                     self.dessiner_cible(x, y, case == "*")
 
         # La trajectoire est dessinee sur le sol, sous les caisses et le chat.
         self.dessiner_trajectoire()
 
-        # Les caisses (celle qu'on vient de pousser glisse vers sa nouvelle case).
+        # Les caisses (celle qu'on vient de pousser glisse vers sa nouvelle case), avec leur ombre.
         for r in range(len(grille)):
             for c in range(len(grille[r])):
                 case = grille[r][c]
@@ -591,6 +632,7 @@ class Game:
                     x, y = self.ecran_case(r, c)
                     if self.anim_caisse is not None and self.anim_caisse[1] == (r, c):
                         x, y = self.glisser(self.anim_caisse[0], self.anim_caisse[1])
+                    self.dessiner_ombre(x + TAILLE // 2 + 3, y + TAILLE - 3, TAILLE - 4)
                     self.monde.blit(self.sprites["caisse"], (x, y))
                     if case == "*":
                         # Caisse bien placee : contour vert, pour la reperer de loin.
@@ -646,6 +688,8 @@ class Game:
         image = self.sprites["joueur"]
         if self.regarde_gauche:
             image = pygame.transform.flip(image, True, False)
+        # Ombre sous les pattes, un peu plus petite quand le chat est en l'air.
+        self.dessiner_ombre(x + TAILLE // 2, y + TAILLE - 4, TAILLE * 2 // 3 - saut * 2)
         # Le chat est plus haut qu'une case : on aligne ses pieds sur le bas de la case.
         self.monde.blit(image, (x + (TAILLE - image.get_width()) // 2, y + TAILLE - image.get_height() - saut))
 
