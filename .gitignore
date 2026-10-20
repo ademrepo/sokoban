@@ -4,3 +4,7 @@ __pycache__/
 venv/
 .vscode/
 *.unitypackage
+
+# Notes personnelles de Camelia (ne pas pousser)
+camelia.md
+voir_assets.py
