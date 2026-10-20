@@ -17,5 +17,5 @@ Une étape par tour de travail. Cocher, dater et indiquer le log au fur et à me
 - [ ] Étape 6b — GUI : retouches du rendu après le jeu fonctionnel (décor, assets, personnage) (ajout demandé par l'équipe)
 - [ ] Étape 6c — GUI : ajuster le look de chaque niveau, niveau par niveau (décor, positions) (ajout demandé par l'équipe)
 - [ ] Étape 10 — Relecture finale
-- [ ] Étape 10b — Nettoyage : enlever tout ce qui est inutile (sprites, fonctions, imports, constantes et commentaires obsolètes, README à jour), avant les explications (ajout demandé par l'équipe)
+- [ ] Étape 10b — Nettoyage : enlever tout ce qui est inutile (sprites, fonctions, imports, constantes et commentaires obsolètes, `voir_assets.py`, README à jour), avant les explications (ajout demandé par l'équipe)
 - [ ] Étape 11 — Explications (`docs/EXPLICATIONS.md`)
