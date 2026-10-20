@@ -36,4 +36,4 @@ Correspondance avec les anciens numéros (avant la renumérotation du 2026-10-20
 Hors plan : commit `c3de3e1` (décor identique dans tous les niveaux, « Niveau N », fenêtre plus petite) = début de l'étape 12, documenté après coup dans docs/logs/2026-10-20_session-15.md.
 
 ## Prochaine étape
-Toutes les étapes sont faites. Reste à l'équipe : écouter les sons et ajuster le volume si besoin, relire `docs/EXPLICATIONS.md` pour la soutenance, et fusionner la branche `adem` dans `main` (pull request). Test : `python main.py`, voir `docs/COMMANDES.md` et `docs/SPEC.md`.
+Toutes les étapes sont faites et la branche `adem` est fusionnée dans `main` (docs/logs/2026-10-20_session-23.md). Reste à l'équipe : relire `docs/EXPLICATIONS.md` pour la soutenance. Test : `python main.py`, voir `docs/COMMANDES.md` et `docs/SPEC.md`.

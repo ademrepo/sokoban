@@ -27,11 +27,10 @@ Voir `docs/PLAN.md` pour la liste à jour. En résumé à ce stade :
 
 1. Python 3 (testé avec Python 3.14). Vérifier dans un terminal : `python --version`
    (sous Windows, si `python` n'est pas reconnu, essayer `py`).
-2. Récupérer le projet et se mettre sur la bonne branche :
+2. Récupérer le projet (branche `main`) :
    ```
    git clone https://github.com/ademrepo/sokoban.git
    cd sokoban
-   git checkout adem          # ou main, une fois la branche fusionnée
    ```
 3. Installer Pygame (version `pygame-ce`, compatible avec `import pygame`, y compris sur les
    Python récents) :

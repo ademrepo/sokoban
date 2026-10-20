@@ -201,7 +201,11 @@ La touche S coupe le son. Si l'ordinateur n'a pas de son, le jeu marche quand m�
 ---
 
 ## 5. Les tests (`python test_core.py`)
-Ce sont de simples `assert` : un mur bloque ; pousser une caisse dans un mur ou deux caisses est interdit ; une caisse poussée sur une cible devient `*` ; marcher sur une cible puis la quitter ; `isGoal` ; un successeur ne modifie pas l'état parent ; la racine et une chaîne de `Node` ; le BFS sur un état déjà but, une poussée, un niveau sans solution ; la solution rejouée arrive au but ; tous les niveaux sont résolus.
+17 tests, avec de simples `assert` :
+- **règles** : un mur bloque ; pousser une caisse dans un mur, ou deux caisses, est interdit ; une caisse poussée sur une cible devient `*` ; une caisse poussée hors d'une cible redevient `B` ; marcher sur une cible puis la quitter ; un successeur ne modifie pas l'état parent ;
+- **niveaux** : bien formés (un seul joueur, autant de caisses que de cibles, bord en murs), pas déjà résolus au départ ;
+- **`isGoal`** et **`Node`** : la racine, une chaîne de trois noeuds ;
+- **BFS** : un état déjà but, une seule poussée, un niveau sans solution, la solution rejouée arrive au but, et tous les niveaux sont résolus avec leur **coût optimal** (4, 35, 36, 30, 28, 2, 5, 10).
 
 ---
 
