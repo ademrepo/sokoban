@@ -12,12 +12,10 @@ Une étape par tour de travail. Cocher, dater et indiquer le log au fur et à me
 - [x] Étape 7c — GUI : fin de niveau : la porte du mur s'ouvre avec une lumière quand toutes les caisses sont sur les cibles (`isGoal`), pancarte « Bravo » en bois qui glisse, puis slide vers le niveau suivant — 2026-10-20 — docs/logs/2026-10-20_session-10.md (ajout demandé par l'équipe ; ne peut être essayée à la main qu'après l'étape 7)
 - [x] Étape 7 — GUI : jeu manuel — 2026-10-20 — docs/logs/2026-10-20_session-11.md
 - [x] Étape 8 — GUI : résolution par BFS (bouton « Résoudre (BFS) » : coût, nombre de pas, temps) — 2026-10-20 — docs/logs/2026-10-20_session-11.md
-- [ ] Étape 9 — GUI : simulation de la solution
+- [x] Étape 9 — GUI : simulation de la solution (trajectoire tracée + lecture automatique) — 2026-10-20 — docs/logs/2026-10-20_session-12.md
 - [ ] Étape 7b — GUI : menu de choix du niveau (ajout demandé par l'équipe)
 - [ ] Étape 6b — GUI : retouches du rendu après le jeu fonctionnel (décor, assets, personnage) (ajout demandé par l'équipe)
 - [ ] Étape 6c — GUI : ajuster le look de chaque niveau, niveau par niveau (décor, positions) (ajout demandé par l'équipe)
 - [ ] Étape 10 — Relecture finale
+- [ ] Étape 10b — Nettoyage : enlever tout ce qui est inutile (sprites, fonctions, imports, constantes et commentaires obsolètes, README à jour), avant les explications (ajout demandé par l'équipe)
 - [ ] Étape 11 — Explications (`docs/EXPLICATIONS.md`)
-
-## Prochaine étape
-Étape 9 — GUI : simulation de la solution (le bouton « Résoudre (BFS) » garde déjà la liste d'actions dans `self.solution` ; il faut la jouer coup par coup, avec une petite pause entre chaque pas). Ensuite : 7b (menu), 6b et 6c (retouches du look), 10 (relecture), 11 (explications). Test : `python main.py` puis jouer avec les flèches, voir `docs/SPEC.md`.

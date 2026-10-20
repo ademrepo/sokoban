@@ -29,6 +29,10 @@ DUREE_OUVERTURE = 2000
 DUREE_BRAVO = 2000
 DUREE_GLISSE = 900
 
+# Temps entre deux pas quand le programme joue la solution tout seul, en millisecondes.
+DELAI_PAS = 350
+COULEUR_TRAJET = (90, 210, 255)
+
 
 class Game:
 
@@ -79,9 +83,17 @@ class Game:
         self.phase = "jeu"
         self.debut_phase = 0
         self.coups = 0          # nombre de deplacements faits a la main
-        self.resultat = ""      # texte du dernier calcul BFS (vide tant qu'on n'a pas clique sur Resoudre)
-        self.solution = None    # liste d'actions trouvee par le BFS (servira a la simulation, etape 9)
+        self.annuler_solution()
         pygame.display.set_caption("Sokoban - " + self.niveau["name"])
+
+    def annuler_solution(self):
+        # Efface la solution du BFS et arrete la lecture automatique.
+        self.solution = None      # liste d'actions trouvee par le BFS
+        self.trajectoire = []     # positions (ligne, colonne) du chat sur le chemin de la solution
+        self.auto = False         # vrai pendant que le programme joue la solution tout seul
+        self.pas_auto = 0         # nombre d'actions de la solution deja jouees
+        self.dernier_pas = 0      # moment du dernier pas automatique (en ms)
+        self.resultat = ""
 
     def ecrire(self, texte, taille, couleur):
         # Texte "jeu 2D pixel" : on ecrit en petit sans lissage, puis on agrandit x2 sans lissage.
@@ -111,6 +123,8 @@ class Game:
                 if evenement.key == pygame.K_b and self.phase == "jeu":
                     self.resoudre()
                 if evenement.key in TOUCHES and self.phase == "jeu":
+                    # Jouer a la main arrete la solution automatique (la position change).
+                    self.annuler_solution()
                     self.bouger(TOUCHES[evenement.key])
             if evenement.type == pygame.MOUSEBUTTONDOWN and evenement.button == 1:
                 if self.bouton_recommencer.collidepoint(evenement.pos):
@@ -126,20 +140,22 @@ class Game:
             if nom == action:
                 self.etat = suivant
                 self.coups = self.coups + 1
-                self.resultat = ""
-                self.solution = None
                 return
 
     def resoudre(self):
-        # Lance le BFS depuis la position actuelle et mesure le temps de calcul.
+        # Lance le BFS depuis la position actuelle, mesure le temps de calcul, trace la trajectoire
+        # du chat (positions de chaque etat du chemin) et demarre la lecture automatique.
+        self.annuler_solution()
         debut = time.time()
         noeud = BFS(self.etat, lambda s: s.successorFunction(), lambda s: s.isGoal())
         duree = time.time() - debut
         if noeud is None:
-            self.solution = None
             self.resultat = "BFS : aucune solution depuis cette position"
         else:
             self.solution = noeud.getSolution()
+            self.trajectoire = [etat.playerPos for etat in noeud.getPath()]
+            self.auto = True
+            self.dernier_pas = pygame.time.get_ticks()
             self.resultat = "BFS : cout " + str(noeud.g) + " | " + str(len(self.solution)) + " pas | " + "%.3f" % duree + " s"
 
     def changer_phase(self, phase):
@@ -149,6 +165,17 @@ class Game:
     def update(self):
         # Enchaine les phases de fin de niveau. isGoal() est la seule chose qui decide de la victoire.
         ecoule = pygame.time.get_ticks() - self.debut_phase
+
+        # Lecture automatique de la solution : un pas toutes les DELAI_PAS millisecondes.
+        if self.auto and self.phase == "jeu":
+            if pygame.time.get_ticks() - self.dernier_pas >= DELAI_PAS:
+                if self.pas_auto < len(self.solution):
+                    self.bouger(self.solution[self.pas_auto])
+                    self.pas_auto = self.pas_auto + 1
+                    self.dernier_pas = pygame.time.get_ticks()
+                else:
+                    self.auto = False
+
         if self.phase == "jeu":
             if self.etat.isGoal():
                 self.changer_phase("ouverture")
@@ -257,6 +284,23 @@ class Game:
         y = (self.porte[0] + self.decalage_ligne + 1) * TAILLE - sprite.get_height()
         return sprite, x, y
 
+    def dessiner_trajectoire(self):
+        # Trace le chemin que le chat va suivre : une ligne bleue entre les centres des cases,
+        # avec un point sur chaque case et un gros point a l'arrivee.
+        # On ne dessine que ce qu'il reste a parcourir : le trait raccourcit pendant la lecture.
+        reste = self.trajectoire[self.pas_auto:]
+        points = []
+        for (r, c) in reste:
+            x = (c + self.decalage_colonne) * TAILLE + TAILLE // 2
+            y = (r + self.decalage_ligne) * TAILLE + TAILLE // 2
+            points.append((x, y))
+        if len(points) >= 2:
+            pygame.draw.lines(self.monde, COULEUR_TRAJET, False, points, 5)
+            for point in points:
+                pygame.draw.circle(self.monde, (255, 255, 255), point, 5)
+            pygame.draw.circle(self.monde, COULEUR_TRAJET, points[-1], 10)
+            pygame.draw.circle(self.monde, (255, 255, 255), points[-1], 10, 3)
+
     def dessiner_niveau(self):
         # Dessine tout le niveau sur self.monde : herbe, haie, decor, murs, sol, cibles, caisses, chat, porte.
         grille = self.etat.grid
@@ -290,6 +334,16 @@ class Game:
                 self.monde.blit(self.sprites["sol" + str(1 + (r * 3 + c * 5) % 2)], (x, y))
                 if case == "S" or case == "." or case == "*":
                     self.dessiner_cible(x, y)
+
+        # La trajectoire est dessinee sur le sol, sous les caisses et le chat.
+        self.dessiner_trajectoire()
+
+        # Caisses et chat par-dessus.
+        for r in range(len(grille)):
+            for c in range(len(grille[r])):
+                case = grille[r][c]
+                x = (c + self.decalage_colonne) * TAILLE
+                y = (r + self.decalage_ligne) * TAILLE
                 if case == "B" or case == "*":
                     self.monde.blit(self.sprites["caisse"], (x, y))
                 if case == "R" or case == ".":
