@@ -12,11 +12,15 @@ ACTIONS = {
 
 class SokobanPuzzle:
 
-    def __init__(self, grid):
+    def __init__(self, grid, player_pos=None):
         # Correspond à init() dans l'énoncé.
         # On stocke la grille sous forme de tuple de chaînes (immuable, donc hashable).
+        # player_pos : position du joueur si on la connaît déjà (c'est le cas pour un successeur :
+        # on vient de le déplacer). Sinon (niveau de départ), on la cherche une seule fois dans la grille.
         self.grid = tuple(grid)
-        self.player_pos = self.trouver_joueur()
+        if player_pos is None:
+            player_pos = self.trouver_joueur()
+        self.player_pos = player_pos
 
     def trouver_joueur(self):
         # Cherche le joueur dans la grille ('R' ou '.') et retourne sa position (ligne, colonne).
@@ -57,17 +61,18 @@ class SokobanPuzzle:
 
         for action in ("UP", "DOWN", "LEFT", "RIGHT"):
             dr, dc = ACTIONS[action]
-            n1_case = self.grid[r + dr][c + dc]
+            n1 = (r + dr, c + dc)
+            n1_case = self.grid[n1[0]][n1[1]]
 
             if n1_case == " " or n1_case == "S":
-                # Case libre : le joueur avance simplement.
-                successeurs.append((action, SokobanPuzzle(self.nouvelle_grille(r, c, dr, dc, False))))
+                # Case libre : le joueur avance simplement (sa nouvelle position est n1, pas besoin de la chercher).
+                successeurs.append((action, SokobanPuzzle(self.nouvelle_grille(r, c, dr, dc, False), n1)))
             elif n1_case == "B" or n1_case == "*":
                 # Caisse : on ne peut la pousser que si la case derrière est libre
                 # (pas un mur, pas une autre caisse).
                 n2_case = self.grid[r + 2 * dr][c + 2 * dc]
                 if n2_case == " " or n2_case == "S":
-                    successeurs.append((action, SokobanPuzzle(self.nouvelle_grille(r, c, dr, dc, True))))
+                    successeurs.append((action, SokobanPuzzle(self.nouvelle_grille(r, c, dr, dc, True), n1)))
             # Sinon c'est un mur : déplacement impossible, pas de successeur.
 
         return successeurs

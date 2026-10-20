@@ -213,9 +213,32 @@ La touche S coupe le son. Si l'ordinateur n'a pas de son, le jeu marche quand m�
 
 ---
 
+## 4 bis. Règles de programmation respectées (et pourquoi)
+
+Ce sont les règles qu'un correcteur vérifie souvent : tester les bonnes choses, dans le bon ordre, sans refaire un travail inutile.
+
+| Règle | Dans le code |
+|---|---|
+| Le test de but ne regarde **que l'état**, et seulement ce qui compte : les caisses. Il ne dépend ni du joueur, ni de l'action jouée, ni du fait qu'il ait bougé. | `isGoal()` : « plus aucun `B` dans la grille ». |
+| Le test de but s'arrête **dès qu'il a la réponse**. | `isGoal()` renvoie `False` à la première ligne qui contient un `B`. |
+| Le but est testé **dès qu'un nœud est créé**, avant de le mettre dans Open, et l'état initial est testé tout de suite. | `BFS` : `if isGoal(racine.state)`, puis `if isGoal(enfant.state)` juste après le test « déjà vu ». On évite de développer un niveau de plus. |
+| On ne remet **jamais** un état déjà vu dans Open (sinon on tourne en rond). | Test « pas dans Closed et pas dans Open ». |
+| Ce test est **rapide** (temps presque constant, pas un parcours de liste). | `ouvertSet` / `fermeSet` (ensembles) + `__hash__` sur la grille. |
+| On compare les états **par leur contenu**, pas comme objets Python. | `__eq__` et `__hash__` utilisent la grille. |
+| Un successeur est un **nouvel** état : le père n'est jamais modifié. | `nouvelle_grille` construit une nouvelle grille ; testé dans `test_core.py`. |
+| On ne **recalcule pas** ce qu'on connaît déjà. | La position du joueur est cherchée une seule fois (niveau de départ). Pour un successeur, on la donne directement (`n1`), sans parcourir la grille (testé aussi). Le BFS va environ deux fois plus vite. |
+| La file Open se vide **par la gauche en temps constant**. | `deque.popleft()` (une liste avec `pop(0)` recopierait tout à chaque fois). |
+| Le chemin n'est pas recopié dans chaque nœud. | Chaque `Node` garde seulement son père ; `getSolution()` remonte les pères une seule fois, à la fin. |
+| Les règles du jeu sont écrites **à un seul endroit**. | `successorFunction()`. L'interface l'appelle pour chaque flèche au lieu de recopier les règles. |
+| Dans un `and`, le test **le moins cher d'abord**. | Interface : `if not self.en_mouvement() and self.etat.isGoal()`. `isGoal`, qui parcourt la grille, n'est appelé que quand le chat est à l'arrêt. |
+| Les successeurs sont générés **toujours dans le même ordre**. | UP, DOWN, LEFT, RIGHT : mêmes solutions et mêmes steps à chaque lancement (les tests le vérifient). |
+| Le dessin n'est **pas refait** quand il ne change pas. | `preparer_fond` dessine le décor une fois par niveau. |
+
+---
+
 ## 5. Les tests (`python test_core.py`)
-16 tests, avec de simples `assert` :
-- **règles** : un mur bloque ; pousser une caisse dans un mur, ou deux caisses, est interdit ; une caisse poussée sur une cible devient `*` ; une caisse poussée hors d'une cible redevient `B` ; marcher sur une cible puis la quitter ; un successeur ne modifie pas l'état parent ;
+17 tests, avec de simples `assert` :
+- **règles** : un mur bloque ; pousser une caisse dans un mur, ou deux caisses, est interdit ; une caisse poussée sur une cible devient `*` ; une caisse poussée hors d'une cible redevient `B` ; marcher sur une cible puis la quitter ; un successeur ne modifie pas l'état parent ; la position du joueur donnée aux successeurs est la bonne ;
 - **niveaux** : bien formés (un seul joueur, autant de caisses que de cibles, bord en murs), pas déjà résolus au départ ;
 - **`isGoal`** et **`Node`** : la racine, une chaîne de trois noeuds ;
 - **BFS** : un état déjà but (0 step), une seule poussée (1 step), un niveau sans solution (2 steps), et tous les niveaux sont résolus avec leur **coût optimal** (4, 35, 36, 30, 28, 2, 5, 10) et leur nombre de **steps** attendu ; la solution de chaque niveau, rejouée avec `successorFunction`, arrive bien au but.

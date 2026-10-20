@@ -427,7 +427,8 @@ class Game:
 
         if self.phase == "jeu":
             # On attend la fin de l'animation pour voir la derniere caisse arriver sur sa cible.
-            if self.etat.isGoal() and not self.en_mouvement():
+            # Le test le moins cher d'abord : isGoal (qui parcourt la grille) n'est appele qu'a l'arret.
+            if not self.en_mouvement() and self.etat.isGoal():
                 self.debut_victoire = pygame.time.get_ticks()
                 self.changer_phase("ouverture")
         elif self.phase == "ouverture":

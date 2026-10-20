@@ -87,6 +87,13 @@ def test_is_goal_faux_au_depart_pour_tous_les_niveaux():
         assert not etat.isGoal(), niveau["name"]
 
 
+def test_position_du_joueur_coherente():
+    # La position donnee aux successeurs (sans recherche) doit etre la vraie position dans leur grille.
+    for niveau in LEVELS:
+        for action, suivant in SokobanPuzzle(niveau["grid"]).successorFunction():
+            assert suivant.player_pos == suivant.trouver_joueur(), niveau["name"]
+
+
 def test_successeurs_ne_modifient_pas_l_etat_parent():
     etat = SokobanPuzzle(["OOOO", "ORBS", "OOOO"])
     grille_avant = etat.grid
@@ -185,6 +192,7 @@ if __name__ == "__main__":
     test_niveaux_bien_formes()
     test_is_goal_faux_au_depart_vrai_sur_plateau_resolu()
     test_is_goal_faux_au_depart_pour_tous_les_niveaux()
+    test_position_du_joueur_coherente()
     test_successeurs_ne_modifient_pas_l_etat_parent()
     test_node_racine()
     test_node_chaine_de_trois_noeuds()
