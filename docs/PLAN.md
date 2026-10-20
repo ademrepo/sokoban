@@ -9,15 +9,15 @@ Une étape par tour de travail. Cocher, dater et indiquer le log au fur et à me
 - [x] Étape 4 — BFS (`search.py`) + tests — 2026-10-20 — docs/logs/2026-10-20_session-05.md
 - [x] Étape 5 — Validation du cœur (BFS sur tous les niveaux, `main.py --console`) — 2026-10-20 — docs/logs/2026-10-20_session-06.md
 - [x] Étape 6 — GUI : rendu statique — 2026-10-20 — docs/logs/2026-10-20_session-07.md
-- [ ] Étape 6b — GUI : ajuster en détail l'apparence de chaque niveau (décor, assets, positions) ; le rendu de l'étape 6 est une première version, pas finie (ajout demandé par l'équipe)
-- [ ] Étape 7 — GUI : jeu manuel
-- [ ] Étape 7b — GUI : menu de choix du niveau (ajout demandé par l'équipe)
-- [ ] Étape 7c — GUI : écran « Bravo » (panneau en bois qui glisse, décor de plantes) puis passage au niveau suivant (ajout demandé par l'équipe)
-- [ ] Étape 8 — GUI : résolution par BFS
+- [x] Étape 7c — GUI : fin de niveau : la porte du mur s'ouvre avec une lumière quand toutes les caisses sont sur les cibles (`isGoal`), pancarte « Bravo » en bois qui glisse, puis slide vers le niveau suivant — 2026-10-20 — docs/logs/2026-10-20_session-10.md (ajout demandé par l'équipe ; ne peut être essayée à la main qu'après l'étape 7)
+- [x] Étape 7 — GUI : jeu manuel — 2026-10-20 — docs/logs/2026-10-20_session-11.md
+- [x] Étape 8 — GUI : résolution par BFS (bouton « Résoudre (BFS) » : coût, nombre de pas, temps) — 2026-10-20 — docs/logs/2026-10-20_session-11.md
 - [ ] Étape 9 — GUI : simulation de la solution
+- [ ] Étape 7b — GUI : menu de choix du niveau (ajout demandé par l'équipe)
+- [ ] Étape 6b — GUI : retouches du rendu après le jeu fonctionnel (décor, assets, personnage) (ajout demandé par l'équipe)
+- [ ] Étape 6c — GUI : ajuster le look de chaque niveau, niveau par niveau (décor, positions) (ajout demandé par l'équipe)
 - [ ] Étape 10 — Relecture finale
 - [ ] Étape 11 — Explications (`docs/EXPLICATIONS.md`)
 
 ## Prochaine étape
-Étape 6b — GUI : ajuster en détail l'apparence de chaque niveau (niveau par niveau, avec les retours de l'équipe : décor, assets, positions). Pour choisir les assets : `python voir_assets.py` (outil perso, non versionné) ; commande de test : `python main.py --niveau N`.
-Ensuite : étape 7 (jeu manuel, flèches du clavier via `successorFunction`, compteur de coups, touche pour recommencer, victoire détectée avec `isGoal`). Voir `docs/SPEC.md`.
+Étape 9 — GUI : simulation de la solution (le bouton « Résoudre (BFS) » garde déjà la liste d'actions dans `self.solution` ; il faut la jouer coup par coup, avec une petite pause entre chaque pas). Ensuite : 7b (menu), 6b et 6c (retouches du look), 10 (relecture), 11 (explications). Test : `python main.py` puis jouer avec les flèches, voir `docs/SPEC.md`.
