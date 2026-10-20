@@ -14,7 +14,7 @@ from collections import deque
 import pygame
 
 from levels import LEVELS
-from sokoban import SokobanPuzzle
+from sokoban import SokobanPuzzle, ACTIONS
 from search import BFS
 from assets_loader import load_sprites, load_sounds
 
@@ -29,6 +29,10 @@ COULEUR_BON = (80, 210, 100)       # contour vert d'une caisse bien placee
 
 # Touche du clavier -> nom de l'action de successorFunction.
 TOUCHES = {pygame.K_UP: "UP", pygame.K_DOWN: "DOWN", pygame.K_LEFT: "LEFT", pygame.K_RIGHT: "RIGHT"}
+
+# Animation d'un deplacement, en millisecondes.
+DUREE_MOUVEMENT = 140    # le chat (et la caisse poussee) glisse d'une case a la suivante
+DELAI_REPETITION = 250   # touche flechee maintenue : le chat continue tout seul apres ce temps
 
 # Durees des phases de fin de niveau, en millisecondes.
 DUREE_OUVERTURE = 1200   # la porte s'ouvre, la lumiere apparait
@@ -124,6 +128,18 @@ class Game:
         self.debut_victoire = 0    # moment ou la porte s'est ouverte (pour la lumiere)
         self.chemin_chat = []      # cases que le chat traverse pour aller a la porte
         self.coups = 0          # nombre de deplacements faits (a la main ou par la lecture automatique)
+        self.historique = []    # etats precedents, pour annuler un coup (touche Z)
+
+        # Animation du dernier deplacement : le chat glisse de anim_joueur[0] a anim_joueur[1],
+        # et la caisse poussee (s'il y en a une) de anim_caisse[0] a anim_caisse[1].
+        self.anim_debut = -DUREE_MOUVEMENT
+        self.anim_joueur = None
+        self.anim_caisse = None
+        self.anim_direction = (0, 0)
+        self.regarde_gauche = False     # le chat est dessine tourne vers la gauche
+        self.action_en_attente = None   # touche appuyee pendant une animation : jouee juste apres
+        self.touche_tenue = None        # fleche gardee appuyee (le chat continue d'avancer)
+        self.moment_appui = 0
         self.annuler_solution()
         pygame.display.set_caption("Sokoban - Niveau " + str(numero + 1))
 
@@ -187,10 +203,20 @@ class Game:
                     self.niveau_suivant()
                 if evenement.key == pygame.K_b and self.phase == "jeu":
                     self.resoudre()
+                if evenement.key in (pygame.K_z, pygame.K_BACKSPACE) and self.phase == "jeu":
+                    self.annuler_coup()
                 if evenement.key in TOUCHES and self.phase == "jeu":
                     # Jouer a la main arrete la solution automatique (la position change).
                     self.annuler_solution()
-                    self.bouger(TOUCHES[evenement.key])
+                    self.touche_tenue = evenement.key
+                    self.moment_appui = pygame.time.get_ticks()
+                    if self.en_mouvement():
+                        self.action_en_attente = TOUCHES[evenement.key]   # joue des que le pas en cours finit
+                    else:
+                        self.bouger(TOUCHES[evenement.key])
+            elif evenement.type == pygame.KEYUP:
+                if evenement.key == self.touche_tenue:
+                    self.touche_tenue = None
             elif evenement.type == pygame.MOUSEBUTTONDOWN and evenement.button == 1:
                 if self.bouton_recommencer.collidepoint(evenement.pos):
                     self.charger_niveau(self.numero)
@@ -237,16 +263,52 @@ class Game:
                     self.charger_niveau(i)
 
     def bouger(self, action):
-        # Un deplacement (touche flechee ou lecture automatique de la solution). On ne re-ecrit AUCUNE regle ici : on demande a successorFunction
-        # la liste des coups possibles et on prend celui qui correspond a la touche.
-        # Si le coup n'y est pas (mur, caisse bloquee...), on ne fait rien.
-        for nom, suivant in self.etat.successorFunction():
+        # Un deplacement (touche flechee ou lecture automatique de la solution).
+        # On ne re-ecrit AUCUNE regle ici : on demande a successorFunction la liste des coups possibles
+        # et on prend celui qui correspond a la touche. Le reste ne sert qu'a l'animation.
+        dr, dc = ACTIONS[action]
+        if dc != 0:
+            self.regarde_gauche = dc < 0
+        ancien = self.etat
+        self.anim_debut = pygame.time.get_ticks()
+        self.anim_direction = (dr, dc)
+        self.anim_caisse = None
+
+        for nom, suivant in ancien.successorFunction():
             if nom == action:
+                self.historique.append(ancien)
                 self.etat = suivant
                 self.coups = self.coups + 1
+                arrivee = suivant.player_pos
+                self.anim_joueur = (ancien.player_pos, arrivee)
+                # Si une caisse etait sur la case d'arrivee, c'est qu'elle a ete poussee d'une case.
+                case = ancien.grid[arrivee[0]][arrivee[1]]
+                if case == "B" or case == "*":
+                    self.anim_caisse = (arrivee, (arrivee[0] + dr, arrivee[1] + dc))
                 if self.son_actif and "pas" in self.sons:
                     self.sons["pas"].play()
                 return
+
+        # Coup refuse (mur, caisse bloquee...) : le chat ne bouge pas, il fait juste un petit "choc".
+        self.anim_joueur = (ancien.player_pos, ancien.player_pos)
+
+    def annuler_coup(self):
+        # Revient a l'etat d'avant le dernier coup (touche Z).
+        if len(self.historique) > 0:
+            self.etat = self.historique.pop()
+            self.coups = self.coups - 1
+            self.anim_joueur = None
+            self.anim_caisse = None
+            self.annuler_solution()
+
+    def en_mouvement(self):
+        # Vrai pendant l'animation du dernier deplacement.
+        return pygame.time.get_ticks() - self.anim_debut < DUREE_MOUVEMENT
+
+    def avancement(self):
+        # Avancement de l'animation entre 0 et 1, qui ralentit a l'arrivee (plus doux qu'une vitesse constante).
+        t = min(1.0, (pygame.time.get_ticks() - self.anim_debut) / float(DUREE_MOUVEMENT))
+        return 1 - (1 - t) * (1 - t)
 
     def resoudre(self):
         # Lance le BFS depuis la position actuelle, mesure le temps de calcul, trace la trajectoire
@@ -272,9 +334,18 @@ class Game:
         # Enchaine les phases de fin de niveau. isGoal() est la seule chose qui decide de la victoire.
         ecoule = pygame.time.get_ticks() - self.debut_phase
 
-        # Lecture automatique de la solution : un pas toutes les DELAI_PAS millisecondes.
-        if self.auto and self.phase == "jeu":
-            if pygame.time.get_ticks() - self.dernier_pas >= DELAI_PAS:
+        # Rien ne se passe tant que le chat n'a pas fini son pas en cours.
+        if self.phase == "jeu" and not self.en_mouvement():
+            if self.action_en_attente is not None:
+                # Touche appuyee pendant le pas precedent.
+                self.bouger(self.action_en_attente)
+                self.action_en_attente = None
+            elif self.touche_tenue is not None and pygame.key.get_pressed()[self.touche_tenue]:
+                # Fleche gardee appuyee : le chat continue d'avancer.
+                if pygame.time.get_ticks() - self.moment_appui >= DELAI_REPETITION:
+                    self.bouger(TOUCHES[self.touche_tenue])
+            elif self.auto and pygame.time.get_ticks() - self.dernier_pas >= DELAI_PAS:
+                # Lecture automatique de la solution : un pas toutes les DELAI_PAS millisecondes.
                 if self.pas_auto < len(self.solution):
                     self.bouger(self.solution[self.pas_auto])
                     self.pas_auto = self.pas_auto + 1
@@ -283,7 +354,8 @@ class Game:
                     self.auto = False
 
         if self.phase == "jeu":
-            if self.etat.isGoal():
+            # On attend la fin de l'animation pour voir la derniere caisse arriver sur sa cible.
+            if self.etat.isGoal() and not self.en_mouvement():
                 self.debut_victoire = pygame.time.get_ticks()
                 self.changer_phase("ouverture")
         elif self.phase == "ouverture":
@@ -511,22 +583,22 @@ class Game:
         # La trajectoire est dessinee sur le sol, sous les caisses et le chat.
         self.dessiner_trajectoire()
 
-        # Caisses et chat par-dessus.
+        # Les caisses (celle qu'on vient de pousser glisse vers sa nouvelle case).
         for r in range(len(grille)):
             for c in range(len(grille[r])):
                 case = grille[r][c]
-                x = (c + self.decalage_colonne) * TAILLE
-                y = (r + self.decalage_ligne) * TAILLE
                 if case == "B" or case == "*":
+                    x, y = self.ecran_case(r, c)
+                    if self.anim_caisse is not None and self.anim_caisse[1] == (r, c):
+                        x, y = self.glisser(self.anim_caisse[0], self.anim_caisse[1])
                     self.monde.blit(self.sprites["caisse"], (x, y))
-                if case == "*":
-                    # Caisse bien placee : contour vert autour de la case, pour la reperer de loin.
-                    pygame.draw.rect(self.monde, COULEUR_BON, (x, y, TAILLE, TAILLE), 3, 6)
-                # Pendant la marche vers la porte, le chat est dessine a part (voir plus bas).
-                if (case == "R" or case == ".") and self.phase != "marche" and self.phase != "queue":
-                    # Le chat est plus haut qu'une case : on aligne ses pieds sur le bas de la case.
-                    chat = self.sprites["joueur"]
-                    self.monde.blit(chat, (x + (TAILLE - chat.get_width()) // 2, y + TAILLE - chat.get_height()))
+                    if case == "*":
+                        # Caisse bien placee : contour vert, pour la reperer de loin.
+                        pygame.draw.rect(self.monde, COULEUR_BON, (x, y, TAILLE, TAILLE), 3, 6)
+
+        # Le chat par-dessus (pendant la marche vers la porte, il est dessine a part, voir plus bas).
+        if self.phase != "marche" and self.phase != "queue":
+            self.dessiner_chat()
 
         # Porte de sortie, dessinee par-dessus le mur choisi (fermee, puis ouverte avec de la lumiere derriere).
         if self.porte is not None:
@@ -543,6 +615,39 @@ class Game:
         # Le chat qui marche vers la porte, puis remue la queue devant (par-dessus la porte et l'arche).
         if self.phase == "marche" or self.phase == "queue":
             self.dessiner_chat_sortie()
+
+    def ecran_case(self, r, c):
+        # Coin haut gauche (en pixels) de la case (r, c) du niveau ; r et c peuvent etre a virgule.
+        return int((c + self.decalage_colonne) * TAILLE), int((r + self.decalage_ligne) * TAILLE)
+
+    def glisser(self, depart, arrivee):
+        # Position (en pixels) d'un objet qui glisse de la case depart a la case arrivee.
+        p = self.avancement()
+        r = depart[0] + (arrivee[0] - depart[0]) * p
+        c = depart[1] + (arrivee[1] - depart[1]) * p
+        return self.ecran_case(r, c)
+
+    def dessiner_chat(self):
+        # Le chat sur sa case, ou en train de glisser vers elle (avec un petit saut),
+        # ou qui fait un petit "choc" contre l'obstacle quand le coup est refuse.
+        r, c = self.etat.player_pos
+        x, y = self.ecran_case(r, c)
+        saut = 0
+        if self.anim_joueur is not None and self.anim_joueur[1] == (r, c) and self.en_mouvement():
+            t = (pygame.time.get_ticks() - self.anim_debut) / float(DUREE_MOUVEMENT)
+            if self.anim_joueur[0] != self.anim_joueur[1]:
+                x, y = self.glisser(self.anim_joueur[0], self.anim_joueur[1])
+                saut = int(math.sin(math.pi * t) * 6)
+            else:
+                choc = math.sin(math.pi * t) * 5
+                x = x + int(self.anim_direction[1] * choc)
+                y = y + int(self.anim_direction[0] * choc)
+
+        image = self.sprites["joueur"]
+        if self.regarde_gauche:
+            image = pygame.transform.flip(image, True, False)
+        # Le chat est plus haut qu'une case : on aligne ses pieds sur le bas de la case.
+        self.monde.blit(image, (x + (TAILLE - image.get_width()) // 2, y + TAILLE - image.get_height() - saut))
 
     def dessiner_chat_sortie(self):
         # Position du chat : il glisse d'une case a la suivante le long de self.chemin_chat.
@@ -564,6 +669,10 @@ class Game:
             image = self.sprites["joueur_queue" + str(1 + (ecoule // 150) % 2)]
         else:
             saut = int(abs(math.sin(ecoule / 90.0)) * 4)
+            if chemin[suivante][1] != chemin[i][1]:
+                self.regarde_gauche = chemin[suivante][1] < chemin[i][1]
+        if self.regarde_gauche:
+            image = pygame.transform.flip(image, True, False)
         x = (colonne + self.decalage_colonne) * TAILLE + (TAILLE - image.get_width()) // 2
         y = (ligne + self.decalage_ligne) * TAILLE + TAILLE - image.get_height() - saut
         self.monde.blit(image, (int(x), int(y)))
@@ -668,7 +777,7 @@ class Game:
         titre = "Niveau " + str(self.numero + 1) + "  -  Coups : " + str(self.coups)
         self.ecran.blit(self.ecrire(titre, 18, (255, 245, 215)), (14, haut + 6))
         self.ecran.blit(self.ecrire(self.resultat, 18, (255, 225, 120)), (14, haut + 28))
-        aide = "Fleches: bouger  R: recommencer  B: BFS  M: menu  S: son  Echap: quitter"
+        aide = "Fleches: bouger  Z: annuler  R: rejouer  B: BFS  M: menu  S: son"
         self.ecran.blit(self.ecrire(aide, 14, (220, 200, 170)), (14, haut + 92))
 
         self.dessiner_bouton(self.bouton_resoudre, "Resoudre (BFS)")
