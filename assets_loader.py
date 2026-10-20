@@ -31,43 +31,50 @@ def decouper_hauteur(feuille, x, y, largeur, hauteur, hauteur_voulue):
     return pygame.transform.scale(morceau, (largeur_voulue, hauteur_voulue))
 
 
-def creer_joueur(taille):
-    # Petit chat dessine avec pygame.draw (le pack n'a qu'un bloc de pierre rectangulaire),
-    # avec un chapeau vert pointu. Toutes les mesures sont des fractions de la taille d'une case.
+def creer_joueur(taille, queue):
+    # Petit chat orange dessine avec pygame.draw (le pack n'a qu'un bloc de pierre rectangulaire),
+    # avec un chapeau vert pointu. queue = 0, 1 ou 2 : trois positions de la queue (pour la faire bouger).
     u = taille / 48.0
     image = pygame.Surface((taille, int(taille * 1.2)), pygame.SRCALPHA)
-    fourrure = (200, 190, 165)
-    contour = (90, 70, 50)
+    orange = (235, 150, 70)
+    clair = (250, 225, 190)
+    contour = (95, 55, 25)
 
     def p(x, y):
         return (int(x * u), int(y * u))
 
-    # Queue, corps et pattes.
-    pygame.draw.line(image, contour, p(34, 52), p(44, 40), int(5 * u) + 1)
-    pygame.draw.line(image, fourrure, p(34, 52), p(44, 40), int(3 * u) + 1)
-    pygame.draw.ellipse(image, contour, (int(10 * u), int(36 * u), int(28 * u), int(21 * u)))
-    pygame.draw.ellipse(image, fourrure, (int(12 * u), int(38 * u), int(24 * u), int(17 * u)))
+    # Queue : chaque position est une petite ligne brisee.
+    queues = [[(34, 52), (44, 47), (44, 38)], [(34, 52), (46, 51), (47, 43)], [(34, 52), (42, 45), (38, 37)]]
+    points = [p(x, y) for (x, y) in queues[queue]]
+    pygame.draw.lines(image, contour, False, points, int(7 * u))
+    pygame.draw.lines(image, orange, False, points, int(4 * u))
 
-    # Oreilles, puis tete.
-    for oreille in ([(8, 26), (9, 14), (18, 22)], [(40, 26), (39, 14), (30, 22)]):
+    # Corps avec un ventre clair.
+    pygame.draw.ellipse(image, contour, (int(10 * u), int(34 * u), int(28 * u), int(22 * u)))
+    pygame.draw.ellipse(image, orange, (int(12 * u), int(36 * u), int(24 * u), int(18 * u)))
+    pygame.draw.ellipse(image, clair, (int(18 * u), int(41 * u), int(12 * u), int(12 * u)))
+
+    # Oreilles puis tete.
+    for oreille in ([(9, 28), (10, 14), (21, 22)], [(39, 28), (38, 14), (27, 22)]):
         points = [p(x, y) for (x, y) in oreille]
-        pygame.draw.polygon(image, fourrure, points)
+        pygame.draw.polygon(image, orange, points)
         pygame.draw.polygon(image, contour, points, 2)
-    pygame.draw.circle(image, contour, p(24, 29), int(15 * u))
-    pygame.draw.circle(image, fourrure, p(24, 29), int(13 * u))
+    pygame.draw.circle(image, contour, p(24, 30), int(16 * u))
+    pygame.draw.circle(image, orange, p(24, 30), int(14 * u))
+    pygame.draw.ellipse(image, clair, (int(16 * u), int(33 * u), int(16 * u), int(11 * u)))
 
-    # Yeux bleus, nez rose.
-    pygame.draw.circle(image, (60, 120, 190), p(18, 31), int(3 * u))
-    pygame.draw.circle(image, (60, 120, 190), p(30, 31), int(3 * u))
-    pygame.draw.circle(image, (255, 150, 160), p(24, 35), int(2 * u))
+    # Grands yeux verts, nez rose.
+    for x in (17, 31):
+        pygame.draw.circle(image, (255, 255, 255), p(x, 31), int(4 * u))
+        pygame.draw.circle(image, (60, 160, 80), p(x, 31), int(3 * u))
+        pygame.draw.circle(image, (20, 20, 20), p(x, 31), int(1.5 * u) + 1)
+    pygame.draw.circle(image, (255, 130, 150), p(24, 37), int(2 * u) + 1)
 
     # Chapeau vert pointu avec un bandeau clair.
-    vert = (50, 160, 60)
-    sombre = (20, 85, 30)
-    chapeau = [p(9, 24), p(39, 24), p(36, 12), p(33, 3), p(21, 8)]
-    pygame.draw.polygon(image, vert, chapeau)
-    pygame.draw.polygon(image, sombre, chapeau, 2)
-    pygame.draw.rect(image, (235, 220, 120), (int(9 * u), int(21 * u), int(30 * u), int(5 * u)))
+    chapeau = [p(9, 26), p(39, 26), p(36, 13), p(33, 3), p(21, 9)]
+    pygame.draw.polygon(image, (50, 160, 60), chapeau)
+    pygame.draw.polygon(image, (20, 85, 30), chapeau, 2)
+    pygame.draw.rect(image, (235, 220, 120), (int(9 * u), int(23 * u), int(30 * u), int(5 * u)))
     return image
 
 
@@ -100,7 +107,9 @@ def load_sprites(taille):
     props = charger_feuille("TX Props.png")
     sprites["caisse"] = decouper(props, 160, 18, 32, 23, taille)
 
-    sprites["joueur"] = creer_joueur(taille)
+    sprites["joueur"] = creer_joueur(taille, 0)
+    sprites["joueur_queue1"] = creer_joueur(taille, 1)    # positions de la queue qui bouge
+    sprites["joueur_queue2"] = creer_joueur(taille, 2)
 
     # Decor autour du niveau : feuilles "avec ombres", proportions gardees (on fixe la hauteur).
     props_ombres = charger_feuille("TX Props with Shadow.png", DOSSIER_OMBRES)
@@ -149,12 +158,8 @@ def load_sprites(taille):
     for nom, rect, hauteur_voulue in autres:
         sprites[nom] = decouper_hauteur(props_ombres, rect[0], rect[1], rect[2], rect[3], hauteur_voulue)
 
-    # Arches et escaliers de la feuille des structures.
+    # Arche en pierre (feuille des structures) : elle encadre seulement la porte de sortie.
     structures = charger_feuille("TX Struct.png")
-    sprites["arche"] = decouper_hauteur(structures, 408, 27, 80, 64, taille * 3 // 2)
-    sprites["arche_porte"] = decouper_hauteur(structures, 408, 27, 80, 64, taille * 2)   # encadre la porte de sortie
-    sprites["arche2"] = decouper_hauteur(structures, 416, 128, 64, 64, taille * 3 // 2)
-    sprites["escalier"] = decouper_hauteur(structures, 48, 288, 90, 96, taille * 3 // 2)
-    sprites["escalier2"] = decouper_hauteur(structures, 176, 288, 90, 96, taille * 3 // 2)
+    sprites["arche_porte"] = decouper_hauteur(structures, 408, 27, 80, 64, taille * 2)
 
     return sprites

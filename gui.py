@@ -8,6 +8,7 @@
 
 import math
 import time
+from collections import deque
 import pygame
 
 from levels import LEVELS
@@ -18,16 +19,24 @@ from assets_loader import load_sprites
 TAILLE = 48            # taille d'une case en pixels
 MARGE = 2              # marge autour du plus grand niveau, en nombre de cases (sert de decor)
 HAUTEUR_BARRE = 132    # hauteur de la barre d'infos en bas de la fenetre, en pixels
-COULEUR_FOND_CIBLE = (60, 50, 20)
-COULEUR_CIBLE = (235, 215, 90)
+# Couleurs de la cible : plaque de pierre avec un contour dore (plus brillant quand une caisse est dessus).
+COULEUR_PLAQUE = (120, 115, 105)
+COULEUR_RUNE = (205, 150, 50)
+COULEUR_RUNE_ALLUMEE = (255, 230, 110)
+COULEUR_BON = (80, 210, 100)       # contour vert d'une caisse bien placee
 
 # Touche du clavier -> nom de l'action de successorFunction.
 TOUCHES = {pygame.K_UP: "UP", pygame.K_DOWN: "DOWN", pygame.K_LEFT: "LEFT", pygame.K_RIGHT: "RIGHT"}
 
 # Durees des phases de fin de niveau, en millisecondes.
-DUREE_OUVERTURE = 2000
-DUREE_BRAVO = 2000
-DUREE_GLISSE = 900
+DUREE_OUVERTURE = 1200   # la porte s'ouvre, la lumiere apparait
+DELAI_CASE = 170         # le chat marche jusqu'a la porte : temps pour traverser une case
+DUREE_QUEUE = 1600       # le chat remue la queue devant la porte
+DUREE_BRAVO = 2000       # la pancarte "Bravo"
+DUREE_GLISSE = 900       # le glissement vers le niveau suivant
+
+# La porte est ouverte (et la lumiere allumee) pendant toutes ces phases.
+PHASES_PORTE_OUVERTE = ("ouverture", "marche", "queue", "bravo")
 
 # Temps entre deux pas quand le programme joue la solution tout seul, en millisecondes.
 DELAI_PAS = 350
@@ -82,6 +91,8 @@ class Game:
         # Phase : "jeu", "ouverture" (porte + lumiere), "bravo" (pancarte), "glisse" (vers le niveau suivant).
         self.phase = "jeu"
         self.debut_phase = 0
+        self.debut_victoire = 0    # moment ou la porte s'est ouverte (pour la lumiere)
+        self.chemin_chat = []      # cases que le chat traverse pour aller a la porte
         self.coups = 0          # nombre de deplacements faits a la main
         self.annuler_solution()
         pygame.display.set_caption("Sokoban - " + self.niveau["name"])
@@ -178,9 +189,17 @@ class Game:
 
         if self.phase == "jeu":
             if self.etat.isGoal():
+                self.debut_victoire = pygame.time.get_ticks()
                 self.changer_phase("ouverture")
         elif self.phase == "ouverture":
             if ecoule >= DUREE_OUVERTURE:
+                self.chemin_chat = self.chemin_vers_porte()
+                self.changer_phase("marche")
+        elif self.phase == "marche":
+            if ecoule >= (len(self.chemin_chat) - 1) * DELAI_CASE:
+                self.changer_phase("queue")
+        elif self.phase == "queue":
+            if ecoule >= DUREE_QUEUE:
                 self.changer_phase("bravo")
         elif self.phase == "bravo":
             if ecoule >= DUREE_BRAVO:
@@ -193,6 +212,37 @@ class Game:
             if ecoule >= DUREE_GLISSE:
                 self.phase = "jeu"
                 self.ancien_monde = None
+
+    def chemin_vers_porte(self):
+        # Chemin (liste de cases) du chat jusqu'a la case juste devant la porte, en evitant murs et caisses.
+        # C'est un petit parcours en largeur sur les cases, pour l'animation seulement : ce n'est
+        # pas un coup du jeu, donc ni les coups ni le cout du BFS ne changent.
+        grille = self.etat.grid
+        depart = self.etat.playerPos
+        if self.porte is None:
+            return [depart]
+        arrivee = (self.porte[0] + 1, self.porte[1])
+
+        parent = {depart: None}
+        file = deque([depart])
+        while len(file) > 0:
+            r, c = file.popleft()
+            for dr, dc in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+                voisine = (r + dr, c + dc)
+                case = grille[voisine[0]][voisine[1]]
+                if voisine not in parent and case != "O" and case != "B" and case != "*":
+                    parent[voisine] = (r, c)
+                    file.append(voisine)
+
+        if arrivee not in parent:
+            return [depart]          # porte inaccessible : le chat reste ou il est
+        chemin = []
+        case = arrivee
+        while case is not None:
+            chemin.append(case)
+            case = parent[case]
+        chemin.reverse()
+        return chemin
 
     def touche_le_sol(self, r, c):
         # Vrai si un des 8 voisins de (r, c) n'est pas un mur.
@@ -231,16 +281,15 @@ class Game:
             return True
         return grille[r][c] == "O" and not self.touche_le_sol(r, c)
 
-    def dessiner_cible(self, x, y):
-        # Croix jaune dans un anneau au centre de la case (la cible n'a pas de sprite dans le pack).
-        # On la dessine d'abord en sombre et plus epaisse pour qu'elle ressorte sur le sol.
-        petit = TAILLE // 4
-        centre_x = x + TAILLE // 2
-        centre_y = y + TAILLE // 2
-        pygame.draw.circle(self.monde, COULEUR_CIBLE, (centre_x, centre_y), TAILLE // 2 - 6, 2)
-        for (couleur, epaisseur) in [(COULEUR_FOND_CIBLE, 8), (COULEUR_CIBLE, 4)]:
-            pygame.draw.line(self.monde, couleur, (centre_x - petit, centre_y - petit), (centre_x + petit, centre_y + petit), epaisseur)
-            pygame.draw.line(self.monde, couleur, (centre_x - petit, centre_y + petit), (centre_x + petit, centre_y - petit), epaisseur)
+    def dessiner_cible(self, x, y, allumee):
+        # La cible est une plaque de pierre carree avec un contour dore (dessinee avec pygame.draw,
+        # il n'y a pas de sprite pour ca dans le pack). Le contour brille quand une caisse est dessus.
+        plaque = pygame.Rect(x + 4, y + 4, TAILLE - 8, TAILLE - 8)
+        pygame.draw.rect(self.monde, COULEUR_PLAQUE, plaque, 0, 6)
+        couleur = COULEUR_RUNE
+        if allumee:
+            couleur = COULEUR_RUNE_ALLUMEE
+        pygame.draw.rect(self.monde, couleur, plaque, 4, 6)
 
     def dessiner_haie(self):
         # Rangee de buissons sur tout le bord de la zone de jeu (il en manque un de temps en temps).
@@ -260,7 +309,7 @@ class Game:
         objets = ["statue", "lanterne", "vase", "buisson", "tonneau", "coffre", "totem", "panneau", "tombe", "banc",
                   "buisson2", "vase2", "stele", "banc2", "tombe2", "totem2", "rocher", "vase3", "coffre2", "panneau2",
                   "stele2", "stele3", "tombe3", "tombe4", "sarcophage", "dalle_haute", "dalle_haute2", "ruine",
-                  "caisses", "caisse_petite", "arche", "arche2", "escalier", "escalier2"]
+                  "caisses", "caisse_petite"]
         for wr in range(1, self.cases_hauteur - 1):
             for wc in range(1, self.cases_largeur - 1):
                 if not self.case_libre(wr, wc):
@@ -278,7 +327,7 @@ class Game:
     def position_porte(self):
         # Coin haut gauche du dessin de la porte (posee sur le bas de sa case de mur) et son sprite.
         sprite = self.sprites["porte"]
-        if self.phase == "ouverture" or self.phase == "bravo":
+        if self.phase in PHASES_PORTE_OUVERTE:
             sprite = self.sprites["porte_ouverte"]
         x = (self.porte[1] + self.decalage_colonne) * TAILLE + (TAILLE - sprite.get_width()) // 2
         y = (self.porte[0] + self.decalage_ligne + 1) * TAILLE - sprite.get_height()
@@ -333,7 +382,7 @@ class Game:
                 # Toutes les autres cases sont du sol de jeu (dalle de pierre) ; l'herbe reste a l'exterieur.
                 self.monde.blit(self.sprites["sol" + str(1 + (r * 3 + c * 5) % 2)], (x, y))
                 if case == "S" or case == "." or case == "*":
-                    self.dessiner_cible(x, y)
+                    self.dessiner_cible(x, y, case == "*")
 
         # La trajectoire est dessinee sur le sol, sous les caisses et le chat.
         self.dessiner_trajectoire()
@@ -346,7 +395,11 @@ class Game:
                 y = (r + self.decalage_ligne) * TAILLE
                 if case == "B" or case == "*":
                     self.monde.blit(self.sprites["caisse"], (x, y))
-                if case == "R" or case == ".":
+                if case == "*":
+                    # Caisse bien placee : contour vert autour de la case, pour la reperer de loin.
+                    pygame.draw.rect(self.monde, COULEUR_BON, (x, y, TAILLE, TAILLE), 3, 6)
+                # Pendant la marche vers la porte, le chat est dessine a part (voir plus bas).
+                if (case == "R" or case == ".") and self.phase != "marche" and self.phase != "queue":
                     # Le chat est plus haut qu'une case : on aligne ses pieds sur le bas de la case.
                     chat = self.sprites["joueur"]
                     self.monde.blit(chat, (x + (TAILLE - chat.get_width()) // 2, y + TAILLE - chat.get_height()))
@@ -359,9 +412,37 @@ class Game:
             arche_x = (self.porte[1] + self.decalage_colonne) * TAILLE + (TAILLE - arche.get_width()) // 2
             arche_y = (self.porte[0] + self.decalage_ligne + 1) * TAILLE - arche.get_height()
             self.monde.blit(arche, (arche_x, arche_y))
-            if self.phase == "ouverture" or self.phase == "bravo":
+            if self.phase in PHASES_PORTE_OUVERTE:
                 pygame.draw.rect(self.monde, (255, 245, 190), (x + 4, y + 8, sprite.get_width() - 8, sprite.get_height() - 8))
             self.monde.blit(sprite, (x, y))
+
+        # Le chat qui marche vers la porte, puis remue la queue devant (par-dessus la porte et l'arche).
+        if self.phase == "marche" or self.phase == "queue":
+            self.dessiner_chat_sortie()
+
+    def dessiner_chat_sortie(self):
+        # Position du chat : il glisse d'une case a la suivante le long de self.chemin_chat.
+        ecoule = pygame.time.get_ticks() - self.debut_phase
+        chemin = self.chemin_chat
+        rang = ecoule / float(DELAI_CASE)
+        if self.phase == "queue" or rang > len(chemin) - 1:
+            rang = len(chemin) - 1.0
+        i = int(rang)
+        suivante = min(i + 1, len(chemin) - 1)
+        reste = rang - i
+        ligne = chemin[i][0] + (chemin[suivante][0] - chemin[i][0]) * reste
+        colonne = chemin[i][1] + (chemin[suivante][1] - chemin[i][1]) * reste
+
+        # Image : la queue bouge de gauche a droite devant la porte, et le chat fait de petits sauts en marchant.
+        image = self.sprites["joueur"]
+        saut = 0
+        if self.phase == "queue":
+            image = self.sprites["joueur_queue" + str(1 + (ecoule // 150) % 2)]
+        else:
+            saut = int(abs(math.sin(ecoule / 90.0)) * 4)
+        x = (colonne + self.decalage_colonne) * TAILLE + (TAILLE - image.get_width()) // 2
+        y = (ligne + self.decalage_ligne) * TAILLE + TAILLE - image.get_height() - saut
+        self.monde.blit(image, (int(x), int(y)))
 
     def dessiner_lumiere(self, ecoule):
         # Lumiere doree qui sort de la porte ouverte : un faisceau vers le bas et un halo qui pulse.
@@ -445,11 +526,9 @@ class Game:
         else:
             self.ecran.blit(self.monde, (0, 0))
 
-        if self.phase == "ouverture" or self.phase == "bravo":
-            temps_lumiere = ecoule
-            if self.phase == "bravo":
-                temps_lumiere = ecoule + DUREE_OUVERTURE
-            self.dessiner_lumiere(temps_lumiere)
+        if self.phase in PHASES_PORTE_OUVERTE:
+            # La lumiere reste allumee depuis le moment de la victoire.
+            self.dessiner_lumiere(pygame.time.get_ticks() - self.debut_victoire)
         if self.phase == "bravo":
             self.dessiner_pancarte(ecoule)
 

@@ -13,7 +13,9 @@ Une étape par tour de travail. Cocher, dater et indiquer le log au fur et à me
 - [x] Étape 7 — GUI : jeu manuel — 2026-10-20 — docs/logs/2026-10-20_session-11.md
 - [x] Étape 8 — GUI : résolution par BFS (bouton « Résoudre (BFS) » : coût, nombre de pas, temps) — 2026-10-20 — docs/logs/2026-10-20_session-11.md
 - [x] Étape 9 — GUI : simulation de la solution (trajectoire tracée + lecture automatique) — 2026-10-20 — docs/logs/2026-10-20_session-12.md
+- [x] Étape 7d — GUI : cibles en plaques de pierre à contour doré (le contour brille quand une caisse est dessus), chat plus joli, et en fin de niveau le chat marche jusqu'à la porte et remue la queue avant le slide (animation : ne compte ni dans les coups ni dans le coût du BFS) — 2026-10-20 — docs/logs/2026-10-20_session-14.md (ajout demandé par l'équipe)
 - [ ] Étape 7b — GUI : menu de choix du niveau (ajout demandé par l'équipe)
+- [ ] Étape 9b — En plus (facultatif) : sons créés par le code, sans fichier ajouté : ambiance de prairie (vent dans l'herbe) en continu et bruit de pas quand on bouge avec les flèches (ajout demandé par l'équipe ; à faire seulement s'il reste du temps)
 - [ ] Étape 6b — GUI : retouches du rendu après le jeu fonctionnel (décor, assets, personnage) (ajout demandé par l'équipe)
 - [ ] Étape 6c — GUI : ajuster le look de chaque niveau, niveau par niveau (décor, positions) (ajout demandé par l'équipe)
 - [ ] Étape 10 — Relecture finale
