@@ -51,6 +51,28 @@ def test_marcher_sur_cible_et_la_quitter():
     assert etat_retour.grid[1] == "ORSO"
 
 
+def test_pousser_caisse_hors_d_une_cible():
+    # La caisse quitte la cible (* -> .) : le joueur se retrouve sur la cible et la caisse redevient B.
+    grille = ["OOOOOO", "OR* SO", "OOOOOO"]
+    etat = SokobanPuzzle(grille)
+    successeurs = dict(etat.successorFunction())
+    assert successeurs["RIGHT"].grid[1] == "O .BSO"
+
+
+def test_niveaux_bien_formes():
+    # Chaque niveau : un seul joueur, autant de caisses que de cibles, lignes de meme largeur,
+    # et des murs sur tout le bord (le joueur ne peut pas sortir de la grille).
+    for niveau in LEVELS:
+        grille = niveau["grid"]
+        texte = "".join(grille)
+        assert texte.count("R") + texte.count(".") == 1, niveau["name"]
+        assert texte.count("B") + texte.count("*") == texte.count("S") + texte.count("*") + texte.count("."), niveau["name"]
+        for ligne in grille:
+            assert len(ligne) == len(grille[0]), niveau["name"]
+            assert ligne[0] == "O" and ligne[-1] == "O", niveau["name"]
+        assert grille[0] == "O" * len(grille[0]) and grille[-1] == "O" * len(grille[0]), niveau["name"]
+
+
 def test_is_goal_faux_au_depart_vrai_sur_plateau_resolu():
     etat_depart = SokobanPuzzle(["OOOO", "ORBS", "OOOO"])
     assert not etat_depart.isGoal()
@@ -142,10 +164,14 @@ def test_bfs_solution_rejouee_arrive_au_but():
 
 def test_bfs_resout_tous_les_niveaux():
     # Chaque niveau de levels.py a une solution, et la rejouer mene bien a un etat but.
-    for niveau in LEVELS:
+    # On verifie aussi le cout : ce sont les couts minimaux, confirmes par un autre solveur (log session 13).
+    couts_optimaux = [4, 35, 36, 30, 28, 2, 5, 10]
+    for i in range(len(LEVELS)):
+        niveau = LEVELS[i]
         etat = SokobanPuzzle(niveau["grid"])
         noeud = lancer_bfs(etat)
         assert noeud is not None, niveau["name"]
+        assert noeud.g == couts_optimaux[i], niveau["name"]
         courant = etat
         for action in noeud.getSolution():
             for a, st in courant.successorFunction():
@@ -161,6 +187,8 @@ if __name__ == "__main__":
     test_pousser_deux_caisses_est_illegale()
     test_pousser_caisse_sur_cible_donne_etoile()
     test_marcher_sur_cible_et_la_quitter()
+    test_pousser_caisse_hors_d_une_cible()
+    test_niveaux_bien_formes()
     test_is_goal_faux_au_depart_vrai_sur_plateau_resolu()
     test_is_goal_faux_au_depart_pour_tous_les_niveaux()
     test_successeurs_ne_modifient_pas_l_etat_parent()

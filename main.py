@@ -46,7 +46,12 @@ def main():
         numero = 0
         menu = True
         if "--niveau" in sys.argv:
-            numero = int(sys.argv[sys.argv.index("--niveau") + 1]) - 1
+            position = sys.argv.index("--niveau") + 1
+            # On verifie que le numero existe, sinon on explique au lieu de planter.
+            if position >= len(sys.argv) or not sys.argv[position].isdigit() or not 1 <= int(sys.argv[position]) <= len(LEVELS):
+                print("Usage : python main.py --niveau N   (N entre 1 et " + str(len(LEVELS)) + ")")
+                return
+            numero = int(sys.argv[position]) - 1
             menu = False
         jeu = Game(numero, menu)
         jeu.run()

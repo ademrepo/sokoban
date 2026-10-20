@@ -4,11 +4,13 @@
 # trouve a la main en regardant la feuille.
 
 import math
+import os
 import random
 from array import array
 import pygame
 
-DOSSIER = "assets/Pixel Art Top Down - Basic v1.2.3/Texture/"
+# Chemin a partir du dossier de ce fichier : le jeu marche meme lance depuis un autre dossier.
+DOSSIER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "Pixel Art Top Down - Basic v1.2.3", "Texture") + os.sep
 DOSSIER_OMBRES = DOSSIER + "Extra/"   # memes feuilles, mais avec les ombres au sol
 
 # Pour rendre l'herbe aussi vive que dans l'apercu du pack (on ajoute ces valeurs R, V, B a chaque pixel).

@@ -116,7 +116,7 @@ class Game:
         self.debut_phase = 0
         self.debut_victoire = 0    # moment ou la porte s'est ouverte (pour la lumiere)
         self.chemin_chat = []      # cases que le chat traverse pour aller a la porte
-        self.coups = 0          # nombre de deplacements faits a la main
+        self.coups = 0          # nombre de deplacements faits (a la main ou par la lecture automatique)
         self.annuler_solution()
         pygame.display.set_caption("Sokoban - Niveau " + str(numero + 1))
 
@@ -207,7 +207,7 @@ class Game:
                     self.charger_niveau(i)
 
     def bouger(self, action):
-        # Deplacement a la main. On ne re-ecrit AUCUNE regle ici : on demande a successorFunction
+        # Un deplacement (touche flechee ou lecture automatique de la solution). On ne re-ecrit AUCUNE regle ici : on demande a successorFunction
         # la liste des coups possibles et on prend celui qui correspond a la touche.
         # Si le coup n'y est pas (mur, caisse bloquee...), on ne fait rien.
         for nom, suivant in self.etat.successorFunction():

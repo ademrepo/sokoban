@@ -23,11 +23,22 @@ Voir `docs/PLAN.md` pour la liste à jour. En résumé à ce stade :
   fin de niveau animée, sons).
 - Les explications du code pour la soutenance sont dans `docs/EXPLICATIONS.md`.
 
-## Prérequis
+## Installation (une seule fois)
 
-- Python 3
-- `pygame-ce` (compatible avec `pygame`, y compris sur les versions récentes de Python) :
-  `pip install pygame-ce`
+1. Python 3 (testé avec Python 3.14). Vérifier dans un terminal : `python --version`
+   (sous Windows, si `python` n'est pas reconnu, essayer `py`).
+2. Récupérer le projet et se mettre sur la bonne branche :
+   ```
+   git clone https://github.com/ademrepo/sokoban.git
+   cd sokoban
+   git checkout adem          # ou main, une fois la branche fusionnée
+   ```
+3. Installer Pygame (version `pygame-ce`, compatible avec `import pygame`, y compris sur les
+   Python récents) :
+   ```
+   pip install pygame-ce
+   ```
+   Si `pygame` (l'ancien) est déjà installé, le désinstaller d'abord : `pip uninstall pygame`.
 
 ## Lancer le jeu
 
@@ -35,20 +46,37 @@ Voir `docs/PLAN.md` pour la liste à jour. En résumé à ce stade :
 python main.py
 ```
 
-Le jeu s'ouvre sur le menu de choix du niveau. Toutes les touches sont dans `docs/COMMANDES.md`.
-Ouvrir directement un niveau : `python main.py --niveau 3`.
+Le jeu s'ouvre sur le **menu** : cliquer sur un niveau (ou taper son numéro, 1 à 8).
 
-Mode console (sans interface graphique) :
+| Touche / bouton | Effet |
+|---|---|
+| Flèches | bouger le chat et pousser les caisses |
+| B ou « Résoudre (BFS) » | résout depuis la position actuelle : affiche coût, nombre de pas et temps, trace la trajectoire, puis joue la solution |
+| R ou « Recommencer » | recommencer le niveau |
+| M ou « Menu » | retour au menu |
+| S | couper / remettre le son |
+| Échap | quitter |
+
+Quand toutes les caisses sont sur les cibles, la porte s'ouvre, le chat y va, la pancarte « Bravo »
+s'affiche et on passe au niveau suivant.
+
+Autres façons de lancer :
 
 ```
-python main.py --console
+python main.py --niveau 3      # ouvre directement le niveau 3 (1 à 8), sans menu
+python main.py --console       # sans fenêtre : BFS sur les 8 niveaux (solution, coût, temps)
 ```
+
+Le jeu peut être lancé depuis n'importe quel dossier (`python chemin/vers/main.py`).
 
 ## Lancer les tests
 
 ```
 python test_core.py
 ```
+
+Doit afficher `Tous les tests sont passes.` (quelques secondes : le BFS est lancé sur les 8 niveaux).
+Les tests vérifient les règles, `Node`, le BFS, la forme des niveaux et les coûts optimaux.
 
 ## Organisation du projet
 
