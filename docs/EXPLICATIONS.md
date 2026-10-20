@@ -153,7 +153,7 @@ Appel : `BFS(etat, lambda s: s.successorFunction(), lambda s: s.isGoal())`. On p
 ## 4. L'interface (énoncé C) : `gui.py`
 
 ### 4.1 Organisation
-Une seule classe `Game`, avec la boucle classique de Pygame (30 images par seconde) :
+Une seule classe `Game`, avec la boucle classique de Pygame (60 images par seconde) :
 ```
 while en_cours:
     handle_events()   # clavier / souris
@@ -162,33 +162,42 @@ while en_cours:
 ```
 Le jeu est piloté par une variable `phase` :
 ```
-menu → jeu → ouverture → marche → queue → bravo → glisse → jeu (niveau suivant)
+menu → jeu → ouverture → marche → queue → bravo ─(bouton « Niveau suivant »)→ glisse → jeu
 ```
-- `menu` : choix du niveau (clic ou touches 1 à 8).
+- `menu` : choix du niveau (cartes avec un aperçu ; clic, touches 1 à 8, ou flèches + Entrée).
 - `jeu` : on joue. **La victoire est décidée uniquement par `isGoal()`.**
 - `ouverture` : la porte s'ouvre et s'illumine.
 - `marche` : le chat va jusqu'à la porte.
 - `queue` : il remue la queue.
-- `bravo` : la pancarte descend.
+- `bravo` : la pancarte descend et **attend** : « Rejouer », « Niveau suivant » ou « Menu ».
 - `glisse` : l'ancien niveau sort à gauche, le nouveau entre à droite.
 
 ### 4.2 Jouer à la main
-`bouger(action)` parcourt `successorFunction()` et prend le successeur qui porte le nom de la touche. Si l'action n'est pas dans la liste (mur, caisse bloquée), il ne se passe rien. **Aucune règle n'est réécrite dans l'interface.**
+`bouger(action)` parcourt `successorFunction()` et prend le successeur qui porte le nom de la touche. Si l'action n'est pas dans la liste (mur, caisse bloquée), l'état ne change pas. **Aucune règle n'est réécrite dans l'interface.**
+
+Le reste de `bouger` ne sert qu'à l'animation :
+- on retient la case de départ et d'arrivée du chat. Si la case d'arrivée contenait une caisse dans l'ancien état, c'est qu'elle a été poussée : on retient aussi son déplacement ;
+- pendant 140 ms, le chat et la caisse **glissent** d'une case à l'autre. `avancement()` donne un nombre entre 0 et 1 qui ralentit à la fin (`1 - (1 - t)²`), ce qui rend le mouvement plus doux. Le chat fait un petit saut et se tourne vers la gauche ou la droite ;
+- si le coup est refusé, le chat fait un petit « choc » vers l'obstacle : on voit que la touche a été prise en compte ;
+- confort : une flèche appuyée pendant un pas est jouée juste après, et une flèche gardée appuyée fait avancer le chat en continu ;
+- **Annuler** (Z) : chaque état précédent est gardé dans `historique` (les états ne sont jamais modifiés, donc on peut les garder tels quels) ; annuler, c'est reprendre le dernier.
 
 ### 4.3 Bouton « Résoudre (BFS) » : la simulation de la solution
 1. On lance `BFS` depuis la position **actuelle** : on peut donc jouer quelques coups puis demander la solution.
 2. On mesure le temps avec `time.time()` avant et après.
 3. On affiche « BFS : coût X | Y pas | Z s ».
 4. `getPath()` donne la trajectoire, dessinée en bleu sur le sol ; elle raccourcit à mesure que le chat avance.
-5. La lecture automatique rejoue `getSolution()` : un coup toutes les 350 ms, avec la même fonction `bouger`.
+5. La lecture automatique rejoue `getSolution()` : un coup toutes les 260 ms, avec la même fonction `bouger`.
 
 ### 4.4 La fin de niveau
-L'animation ne compte ni dans les coups ni dans le coût. Pour amener le chat devant la porte, `chemin_vers_porte` fait un petit parcours en largeur sur les cases (même idée que le BFS : une file et les cases déjà vues). Ce n'est pas un coup du jeu, juste un chemin pour l'animation. La porte est un simple dessin : la case reste un mur.
+La victoire n'est déclarée qu'une fois le dernier pas fini, pour qu'on voie la caisse arriver. L'animation de fin ne compte ni dans les coups ni dans le coût. Pour amener le chat devant la porte, `chemin_vers_porte` fait un petit parcours en largeur sur les cases (même idée que le BFS : une file et les cases déjà vues). Ce n'est pas un coup du jeu, juste un chemin pour l'animation. La porte est un simple dessin : la case reste un mur.
 
 ### 4.5 Les dessins
-- Herbe, sol, murs, caisses, décor et porte viennent du pack « Pixel Art Top Down - Basic » (Cainos, itch.io), découpés dans `assets_loader.py`.
-- Le chat, les plaques cibles (contour doré) et la pancarte sont dessinés avec `pygame.draw`.
-- Le décor est identique dans tous les niveaux et posé par des règles fixes (pas de hasard) : le rendu est toujours le même.
+- Herbe, sol, murs, caisses, décor (arbres, statues, banc, vases, tonneaux, lanternes...) et porte viennent du pack « Pixel Art Top Down - Basic » (Cainos, itch.io), découpés dans `assets_loader.py`.
+- Le chat, les plaques cibles, la pancarte, les boutons et les cartes du menu sont dessinés avec `pygame.draw`.
+- **Décor** : il est posé par des règles fixes (pas de hasard), et `poser` vérifie toutes les cases que l'image recouvre. Un objet qui toucherait le niveau ou un autre objet n'est pas posé, donc le même décor s'adapte aux petits et aux grands niveaux.
+- **Fond pré-dessiné** : ce qui ne bouge jamais (herbe, haie, décor, murs, sol) est dessiné une seule fois par niveau (`preparer_fond`), puis recopié à chaque image. On ne redessine que ce qui bouge.
+- **Effets** (`dessiner_effets`) : ombres de nuages qui passent, lucioles qui clignotent, poussière quand on pousse une caisse et étincelles quand elle arrive sur une cible ; les cibles « respirent », un halo doré entoure une caisse bien placée, les bords de l'image sont un peu assombris (vignette). Le chat respire et remue la queue quand il attend. Tout est fait avec des cercles et des ellipses transparents (`creer_halo`), sans image en plus. Ces effets ne touchent jamais à l'état du jeu.
 
 ### 4.6 Les sons
 Il n'y a aucun fichier audio : les sons sont **calculés** dans `assets_loader.py`. Un son n'est qu'une suite de nombres entre -1 et 1 (22 050 par seconde) :

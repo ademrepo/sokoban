@@ -1,7 +1,8 @@
 # Interface Pygame du jeu (classe Game).
-# - menu de choix du niveau (au lancement, ou touche M / bouton "Menu") ;
-# - rendu d'un niveau avec les sprites du pack ;
-# - jeu manuel (fleches du clavier), compteur de coups, recommencer ;
+# - menu de choix du niveau, avec un apercu de chaque niveau (au lancement, ou touche M / bouton "Menu") ;
+# - rendu d'un niveau avec les sprites du pack, decor autour et effets (nuages, lucioles, etincelles) ;
+# - jeu manuel : le chat et les caisses glissent d'une case a l'autre, compteur de coups,
+#   annuler (Z), recommencer ;
 # - bouton "Resoudre (BFS)" : cout, nombre de pas et temps de calcul, puis trajectoire tracee
 #   et lecture automatique de la solution ;
 # - fin de niveau : la porte s'ouvre et s'illumine, le chat va devant la porte et remue la queue,
@@ -46,7 +47,7 @@ DUREE_GLISSE = 900       # le glissement vers le niveau suivant
 PHASES_PORTE_OUVERTE = ("ouverture", "marche", "queue", "bravo")
 
 # Temps entre deux pas quand le programme joue la solution tout seul, en millisecondes.
-DELAI_PAS = 350
+DELAI_PAS = 260
 COULEUR_TRAJET = (90, 210, 255)
 
 # Effets du decor vivant.
@@ -124,7 +125,6 @@ class Game:
         self.nuage = pygame.transform.smoothscale(creer_halo(100, (20, 30, 10), 85), (360, 200))
         self.lueur = creer_halo(10, (255, 240, 140), 200)
         self.halo_cible = creer_halo(TAILLE, (255, 220, 90), 150)
-        self.particules = []     # etincelles et poussiere : [x, y, vx, vy, naissance, couleur]
         # Lucioles : position de depart, vitesse et decalage au hasard (graine fixe : toujours pareil).
         hasard = random.Random(5)
         self.lucioles = []
@@ -191,7 +191,7 @@ class Game:
         self.chemin_chat = []      # cases que le chat traverse pour aller a la porte
         self.coups = 0          # nombre de deplacements faits (a la main ou par la lecture automatique)
         self.historique = []    # etats precedents, pour annuler un coup (touche Z)
-        self.particules = []
+        self.particules = []    # etincelles et poussiere : [x, y, vx, vy, naissance, couleur]
 
         # Animation du dernier deplacement : le chat glisse de anim_joueur[0] a anim_joueur[1],
         # et la caisse poussee (s'il y en a une) de anim_caisse[0] a anim_caisse[1].
@@ -246,7 +246,7 @@ class Game:
             self.handle_events()
             self.update()
             self.draw()
-            self.horloge.tick(30)
+            self.horloge.tick(60)      # 60 images par seconde : animations fluides
         pygame.quit()
 
     def handle_events(self):
