@@ -1,5 +1,5 @@
 # Tests "console" avec de simples assert (pas de pytest).
-# Sera complété au fur et à mesure des etapes 2, 3, 4 et 5.
+# On teste les regles (SokobanPuzzle), le Node et le BFS. Lancer : python test_core.py
 
 from sokoban import SokobanPuzzle
 from node import Node
@@ -7,14 +7,14 @@ from search import BFS
 from levels import LEVELS
 
 
-def testMurBloqueDeplacement():
+def test_mur_bloque_deplacement():
     grille = ["OOO", "ORO", "OOO"]
     etat = SokobanPuzzle(grille)
     actions = [action for action, suivant in etat.successorFunction()]
     assert actions == []
 
 
-def testPousserCaisseDansMurEstIllegale():
+def test_pousser_caisse_dans_mur_est_illegale():
     # Joueur a gauche d'une caisse, mur juste apres la caisse : poussee impossible.
     grille = ["OOOO", "ORBO", "OOOO"]
     etat = SokobanPuzzle(grille)
@@ -22,7 +22,7 @@ def testPousserCaisseDansMurEstIllegale():
     assert "RIGHT" not in actions
 
 
-def testPousserDeuxCaissesEstIllegale():
+def test_pousser_deux_caisses_est_illegale():
     # Joueur puis deux caisses d'affilee : la premiere ne peut pas etre poussee.
     grille = ["OOOOO", "ORBBO", "OOOOO"]
     etat = SokobanPuzzle(grille)
@@ -30,49 +30,71 @@ def testPousserDeuxCaissesEstIllegale():
     assert "RIGHT" not in actions
 
 
-def testPousserCaisseSurCibleDonneEtoile():
+def test_pousser_caisse_sur_cible_donne_etoile():
     grille = ["OOOOO", "ORBSO", "OOOOO"]
     etat = SokobanPuzzle(grille)
     successeurs = dict(etat.successorFunction())
-    nouvelEtat = successeurs["RIGHT"]
-    assert nouvelEtat.grid == ("OOOOO", "O R*O", "OOOOO")
+    nouvel_etat = successeurs["RIGHT"]
+    assert nouvel_etat.grid == ("OOOOO", "O R*O", "OOOOO")
 
 
-def testMarcherSurCibleEtLaQuitter():
+def test_marcher_sur_cible_et_la_quitter():
     # Le joueur marche sur une cible (S -> .), puis en repart (. -> S).
     grille = ["OOOO", "ORSO", "OOOO"]
     etat = SokobanPuzzle(grille)
     successeurs = dict(etat.successorFunction())
-    etatSurCible = successeurs["RIGHT"]
-    assert etatSurCible.grid[1] == "O .O"
+    etat_sur_cible = successeurs["RIGHT"]
+    assert etat_sur_cible.grid[1] == "O .O"
 
-    successeursRetour = dict(etatSurCible.successorFunction())
-    etatRetour = successeursRetour["LEFT"]
-    assert etatRetour.grid[1] == "ORSO"
-
-
-def testIsGoalFauxAuDepartVraiSurPlateauResolu():
-    etatDepart = SokobanPuzzle(["OOOO", "ORBS", "OOOO"])
-    assert not etatDepart.isGoal()
-
-    etatResolu = SokobanPuzzle(["OOOO", "OR *", "OOOO"])
-    assert etatResolu.isGoal()
+    successeurs_retour = dict(etat_sur_cible.successorFunction())
+    etat_retour = successeurs_retour["LEFT"]
+    assert etat_retour.grid[1] == "ORSO"
 
 
-def testIsGoalFauxAuDepartPourTousLesNiveaux():
+def test_pousser_caisse_hors_d_une_cible():
+    # La caisse quitte la cible (* -> .) : le joueur se retrouve sur la cible et la caisse redevient B.
+    grille = ["OOOOOO", "OR* SO", "OOOOOO"]
+    etat = SokobanPuzzle(grille)
+    successeurs = dict(etat.successorFunction())
+    assert successeurs["RIGHT"].grid[1] == "O .BSO"
+
+
+def test_niveaux_bien_formes():
+    # Chaque niveau : un seul joueur, autant de caisses que de cibles, lignes de meme largeur,
+    # et des murs sur tout le bord (le joueur ne peut pas sortir de la grille).
+    for niveau in LEVELS:
+        grille = niveau["grid"]
+        texte = "".join(grille)
+        assert texte.count("R") + texte.count(".") == 1, niveau["name"]
+        assert texte.count("B") + texte.count("*") == texte.count("S") + texte.count("*") + texte.count("."), niveau["name"]
+        for ligne in grille:
+            assert len(ligne) == len(grille[0]), niveau["name"]
+            assert ligne[0] == "O" and ligne[-1] == "O", niveau["name"]
+        assert grille[0] == "O" * len(grille[0]) and grille[-1] == "O" * len(grille[0]), niveau["name"]
+
+
+def test_is_goal_faux_au_depart_vrai_sur_plateau_resolu():
+    etat_depart = SokobanPuzzle(["OOOO", "ORBS", "OOOO"])
+    assert not etat_depart.isGoal()
+
+    etat_resolu = SokobanPuzzle(["OOOO", "OR *", "OOOO"])
+    assert etat_resolu.isGoal()
+
+
+def test_is_goal_faux_au_depart_pour_tous_les_niveaux():
     for niveau in LEVELS:
         etat = SokobanPuzzle(niveau["grid"])
         assert not etat.isGoal(), niveau["name"]
 
 
-def testSuccesseursNeModifientPasLEtatParent():
+def test_successeurs_ne_modifient_pas_l_etat_parent():
     etat = SokobanPuzzle(["OOOO", "ORBS", "OOOO"])
-    grilleAvant = etat.grid
+    grille_avant = etat.grid
     etat.successorFunction()
-    assert etat.grid == grilleAvant
+    assert etat.grid == grille_avant
 
 
-def testNodeRacine():
+def test_node_racine():
     etat = SokobanPuzzle(["OOOO", "ORBS", "OOOO"])
     racine = Node(etat)
     assert racine.parent is None
@@ -82,7 +104,7 @@ def testNodeRacine():
     assert racine.getSolution() == []
 
 
-def testNodeChaineDeTroisNoeuds():
+def test_node_chaine_de_trois_noeuds():
     # Chaine construite a la main : racine -> RIGHT -> RIGHT (poussee de la caisse).
     etat0 = SokobanPuzzle(["OOOOO", "OR BS", "OOOOO"])
     etat1 = etat0.successorFunction()[0][1]
@@ -98,35 +120,35 @@ def testNodeChaineDeTroisNoeuds():
     assert n1.getSolution() == [action1]
 
 
-def lancerBFS(etat):
+def lancer_bfs(etat):
     return BFS(etat, lambda st: st.successorFunction(), lambda st: st.isGoal())
 
 
-def testBFSEtatInitialDejaBut():
+def test_bfs_etat_initial_deja_but():
     etat = SokobanPuzzle(["OOOO", "OR *", "OOOO"])
-    noeud = lancerBFS(etat)
+    noeud = lancer_bfs(etat)
     assert noeud.g == 0
     assert noeud.getSolution() == []
 
 
-def testBFSUnePoussee():
+def test_bfs_une_poussee():
     etat = SokobanPuzzle(["OOOOO", "ORBSO", "OOOOO"])
-    noeud = lancerBFS(etat)
+    noeud = lancer_bfs(etat)
     assert noeud.getSolution() == ["RIGHT"]
     assert noeud.g == 1
     assert noeud.state.isGoal()
 
 
-def testBFSSansSolution():
+def test_bfs_sans_solution():
     # Cible a gauche, caisse collee au mur de droite, joueur entre les deux :
     # le joueur ne peut pas passer derriere la caisse, donc aucune solution.
-    assert lancerBFS(SokobanPuzzle(["OOOOO", "OSRBO", "OOOOO"])) is None
+    assert lancer_bfs(SokobanPuzzle(["OOOOO", "OSRBO", "OOOOO"])) is None
 
 
-def testBFSSolutionRejoueeArriveAuBut():
+def test_bfs_solution_rejouee_arrive_au_but():
     # On rejoue les actions de la solution avec successorFunction : on doit finir sur un but.
     etat = SokobanPuzzle(LEVELS[0]["grid"])
-    noeud = lancerBFS(etat)
+    noeud = lancer_bfs(etat)
     assert noeud is not None
     courant = etat
     for action in noeud.getSolution():
@@ -140,12 +162,16 @@ def testBFSSolutionRejoueeArriveAuBut():
     assert len(noeud.getSolution()) == noeud.g
 
 
-def testBFSResoutTousLesNiveaux():
+def test_bfs_resout_tous_les_niveaux():
     # Chaque niveau de levels.py a une solution, et la rejouer mene bien a un etat but.
-    for niveau in LEVELS:
+    # On verifie aussi le cout : ce sont les couts minimaux, confirmes par un autre solveur (log session 13).
+    couts_optimaux = [4, 35, 36, 30, 28, 2, 5, 10]
+    for i in range(len(LEVELS)):
+        niveau = LEVELS[i]
         etat = SokobanPuzzle(niveau["grid"])
-        noeud = lancerBFS(etat)
+        noeud = lancer_bfs(etat)
         assert noeud is not None, niveau["name"]
+        assert noeud.g == couts_optimaux[i], niveau["name"]
         courant = etat
         for action in noeud.getSolution():
             for a, st in courant.successorFunction():
@@ -156,19 +182,21 @@ def testBFSResoutTousLesNiveaux():
 
 
 if __name__ == "__main__":
-    testMurBloqueDeplacement()
-    testPousserCaisseDansMurEstIllegale()
-    testPousserDeuxCaissesEstIllegale()
-    testPousserCaisseSurCibleDonneEtoile()
-    testMarcherSurCibleEtLaQuitter()
-    testIsGoalFauxAuDepartVraiSurPlateauResolu()
-    testIsGoalFauxAuDepartPourTousLesNiveaux()
-    testSuccesseursNeModifientPasLEtatParent()
-    testNodeRacine()
-    testNodeChaineDeTroisNoeuds()
-    testBFSEtatInitialDejaBut()
-    testBFSUnePoussee()
-    testBFSSansSolution()
-    testBFSSolutionRejoueeArriveAuBut()
-    testBFSResoutTousLesNiveaux()
+    test_mur_bloque_deplacement()
+    test_pousser_caisse_dans_mur_est_illegale()
+    test_pousser_deux_caisses_est_illegale()
+    test_pousser_caisse_sur_cible_donne_etoile()
+    test_marcher_sur_cible_et_la_quitter()
+    test_pousser_caisse_hors_d_une_cible()
+    test_niveaux_bien_formes()
+    test_is_goal_faux_au_depart_vrai_sur_plateau_resolu()
+    test_is_goal_faux_au_depart_pour_tous_les_niveaux()
+    test_successeurs_ne_modifient_pas_l_etat_parent()
+    test_node_racine()
+    test_node_chaine_de_trois_noeuds()
+    test_bfs_etat_initial_deja_but()
+    test_bfs_une_poussee()
+    test_bfs_sans_solution()
+    test_bfs_solution_rejouee_arrive_au_but()
+    test_bfs_resout_tous_les_niveaux()
     print("Tous les tests sont passes.")

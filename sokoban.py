@@ -16,9 +16,9 @@ class SokobanPuzzle:
         # Correspond à init() dans l'énoncé.
         # On stocke la grille sous forme de tuple de chaînes (immuable, donc hashable).
         self.grid = tuple(grid)
-        self.playerPos = self.trouverJoueur()
+        self.player_pos = self.trouver_joueur()
 
-    def trouverJoueur(self):
+    def trouver_joueur(self):
         # Cherche le joueur dans la grille ('R' ou '.') et retourne sa position (ligne, colonne).
         for r in range(len(self.grid)):
             for c in range(len(self.grid[r])):
@@ -52,35 +52,35 @@ class SokobanPuzzle:
         # Génère la liste des (action, successeur) pour les 4 directions, dans
         # l'ordre UP, DOWN, LEFT, RIGHT, pour que le résultat soit déterministe.
         successeurs = []
-        r, c = self.playerPos
+        r, c = self.player_pos
 
         for action in ("UP", "DOWN", "LEFT", "RIGHT"):
             dr, dc = ACTIONS[action]
             n1 = (r + dr, c + dc)
-            n1Case = self.grid[n1[0]][n1[1]]
+            n1_case = self.grid[n1[0]][n1[1]]
 
-            if n1Case == "O":
+            if n1_case == "O":
                 # Mur : déplacement impossible.
                 continue
 
-            if n1Case == " " or n1Case == "S":
+            if n1_case == " " or n1_case == "S":
                 # Case libre : le joueur se déplace simplement.
-                nouvelleGrille = self.deplacerJoueur(r, c, n1[0], n1[1])
-                successeurs.append((action, SokobanPuzzle(nouvelleGrille)))
+                nouvelle_grille = self.deplacer_joueur(r, c, n1[0], n1[1])
+                successeurs.append((action, SokobanPuzzle(nouvelle_grille)))
                 continue
 
-            if n1Case == "B" or n1Case == "*":
+            if n1_case == "B" or n1_case == "*":
                 # Caisse : on ne peut la pousser que si la case suivante est libre.
                 n2 = (r + 2 * dr, c + 2 * dc)
-                n2Case = self.grid[n2[0]][n2[1]]
-                if n2Case == " " or n2Case == "S":
-                    nouvelleGrille = self.pousserCaisse(r, c, n1[0], n1[1], n2[0], n2[1])
-                    successeurs.append((action, SokobanPuzzle(nouvelleGrille)))
+                n2_case = self.grid[n2[0]][n2[1]]
+                if n2_case == " " or n2_case == "S":
+                    nouvelle_grille = self.pousser_caisse(r, c, n1[0], n1[1], n2[0], n2[1])
+                    successeurs.append((action, SokobanPuzzle(nouvelle_grille)))
                 continue
 
         return successeurs
 
-    def deplacerJoueur(self, r, c, nr, nc):
+    def deplacer_joueur(self, r, c, nr, nc):
         # Construit une nouvelle grille avec le joueur déplacé de (r,c) vers (nr,nc).
         lignes = [list(ligne) for ligne in self.grid]
 
@@ -98,7 +98,7 @@ class SokobanPuzzle:
 
         return ["".join(ligne) for ligne in lignes]
 
-    def pousserCaisse(self, r, c, nr, nc, nnr, nnc):
+    def pousser_caisse(self, r, c, nr, nc, nnr, nnc):
         # Construit une nouvelle grille : le joueur avance de (r,c) vers (nr,nc)
         # et pousse la caisse de (nr,nc) vers (nnr,nnc).
         lignes = [list(ligne) for ligne in self.grid]

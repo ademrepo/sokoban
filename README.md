@@ -18,28 +18,55 @@ Avant de coder quoi que ce soit, lire dans cet ordre :
 
 Voir `docs/PLAN.md` pour la liste à jour. En résumé à ce stade :
 
-- Fait : niveaux (`levels.py`), état du jeu et règles (`sokoban.py`, testé dans `test_core.py`).
-- Pas encore fait : `Node` (`node.py`), `BFS` (`search.py`), et toute l'interface Pygame
-  (`gui.py`, `assets_loader.py`, `main.py` ne sont que des stubs vides pour l'instant).
-  `python main.py` ne fait donc rien d'utile tant que ces étapes ne sont pas faites.
+- Le jeu est complet : niveaux, état et règles (`SokobanPuzzle`), `Node`, `BFS`, mode console, et
+  l'interface Pygame (menu, jeu à la main, bouton « Résoudre (BFS) », simulation de la solution,
+  fin de niveau animée, sons).
+- Les explications du code pour la soutenance sont dans `docs/EXPLICATIONS.md`.
 
-## Prérequis
+## Installation (une seule fois)
 
-- Python 3
-- `pygame-ce` (compatible avec `pygame`, y compris sur les versions récentes de Python) :
-  `pip install pygame-ce`
+1. Python 3 (testé avec Python 3.14). Vérifier dans un terminal : `python --version`
+   (sous Windows, si `python` n'est pas reconnu, essayer `py`).
+2. Récupérer le projet (branche `main`) :
+   ```
+   git clone https://github.com/ademrepo/sokoban.git
+   cd sokoban
+   ```
+3. Installer Pygame (version `pygame-ce`, compatible avec `import pygame`, y compris sur les
+   Python récents) :
+   ```
+   pip install pygame-ce
+   ```
+   Si `pygame` (l'ancien) est déjà installé, le désinstaller d'abord : `pip uninstall pygame`.
 
-## Lancer le jeu (une fois les étapes GUI faites)
+## Lancer le jeu
 
 ```
 python main.py
 ```
 
-Mode console (sans interface graphique) :
+Le jeu s'ouvre sur le **menu** : cliquer sur un niveau (ou taper son numéro, 1 à 8).
+
+| Touche / bouton | Effet |
+|---|---|
+| Flèches | bouger le chat et pousser les caisses |
+| B ou « Résoudre (BFS) » | résout depuis la position actuelle : affiche coût, nombre de pas et temps, trace la trajectoire, puis joue la solution |
+| R ou « Recommencer » | recommencer le niveau |
+| M ou « Menu » | retour au menu |
+| S | couper / remettre le son |
+| Échap | quitter |
+
+Quand toutes les caisses sont sur les cibles, la porte s'ouvre, le chat y va, la pancarte « Bravo »
+s'affiche et on passe au niveau suivant.
+
+Autres façons de lancer :
 
 ```
-python main.py --console
+python main.py --niveau 3      # ouvre directement le niveau 3 (1 à 8), sans menu
+python main.py --console       # sans fenêtre : BFS sur les 8 niveaux (solution, coût, temps)
 ```
+
+Le jeu peut être lancé depuis n'importe quel dossier (`python chemin/vers/main.py`).
 
 ## Lancer les tests
 
@@ -47,12 +74,19 @@ python main.py --console
 python test_core.py
 ```
 
+Doit afficher `Tous les tests sont passes.` (quelques secondes : le BFS est lancé sur les 8 niveaux).
+Les tests vérifient les règles, `Node`, le BFS, la forme des niveaux et les coûts optimaux.
+
 ## Organisation du projet
 
 - `sokoban.py` — règles du jeu et état (`SokobanPuzzle`)
 - `node.py` — noeud de l'arbre de recherche (`Node`)
 - `search.py` — algorithme `BFS`
 - `levels.py` — les niveaux
-- `gui.py`, `assets_loader.py`, `main.py` — interface Pygame
+- `gui.py` — interface Pygame (classe `Game`)
+- `assets_loader.py` — découpe des sprites et sons créés par le code
+- `main.py` — point d'entrée (`python main.py`, `--niveau N`, `--console`)
 - `test_core.py` — tests (`assert`, pas de pytest)
-- `docs/` — spécification complète (`SPEC.md`), suivi (`PLAN.md`), journal de sessions (`logs/`)
+- `assets/` — pack d'images « Pixel Art Top Down - Basic » (Cainos, itch.io)
+- `docs/` — spécification (`SPEC.md`), suivi (`PLAN.md`), journal de sessions (`logs/`),
+  commandes (`COMMANDES.md`), explications (`EXPLICATIONS.md`)

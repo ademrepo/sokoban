@@ -3,9 +3,14 @@
 # Chaque sprite est decoupe dans une feuille avec un rectangle (x, y, largeur, hauteur)
 # trouve a la main en regardant la feuille.
 
+import math
+import os
+import random
+from array import array
 import pygame
 
-DOSSIER = "assets/Pixel Art Top Down - Basic v1.2.3/Texture/"
+# Chemin a partir du dossier de ce fichier : le jeu marche meme lance depuis un autre dossier.
+DOSSIER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "Pixel Art Top Down - Basic v1.2.3", "Texture") + os.sep
 DOSSIER_OMBRES = DOSSIER + "Extra/"   # memes feuilles, mais avec les ombres au sol
 
 # Pour rendre l'herbe aussi vive que dans l'apercu du pack (on ajoute ces valeurs R, V, B a chaque pixel).
@@ -31,43 +36,50 @@ def decouper_hauteur(feuille, x, y, largeur, hauteur, hauteur_voulue):
     return pygame.transform.scale(morceau, (largeur_voulue, hauteur_voulue))
 
 
-def creer_joueur(taille):
-    # Petit chat dessine avec pygame.draw (le pack n'a qu'un bloc de pierre rectangulaire),
-    # avec un chapeau vert pointu. Toutes les mesures sont des fractions de la taille d'une case.
+def creer_joueur(taille, queue):
+    # Petit chat orange dessine avec pygame.draw (le pack n'a qu'un bloc de pierre rectangulaire),
+    # avec un chapeau vert pointu. queue = 0, 1 ou 2 : trois positions de la queue (pour la faire bouger).
     u = taille / 48.0
     image = pygame.Surface((taille, int(taille * 1.2)), pygame.SRCALPHA)
-    fourrure = (200, 190, 165)
-    contour = (90, 70, 50)
+    orange = (235, 150, 70)
+    clair = (250, 225, 190)
+    contour = (95, 55, 25)
 
     def p(x, y):
         return (int(x * u), int(y * u))
 
-    # Queue, corps et pattes.
-    pygame.draw.line(image, contour, p(34, 52), p(44, 40), int(5 * u) + 1)
-    pygame.draw.line(image, fourrure, p(34, 52), p(44, 40), int(3 * u) + 1)
-    pygame.draw.ellipse(image, contour, (int(10 * u), int(36 * u), int(28 * u), int(21 * u)))
-    pygame.draw.ellipse(image, fourrure, (int(12 * u), int(38 * u), int(24 * u), int(17 * u)))
+    # Queue : chaque position est une petite ligne brisee.
+    queues = [[(34, 52), (44, 47), (44, 38)], [(34, 52), (46, 51), (47, 43)], [(34, 52), (42, 45), (38, 37)]]
+    points = [p(x, y) for (x, y) in queues[queue]]
+    pygame.draw.lines(image, contour, False, points, int(7 * u))
+    pygame.draw.lines(image, orange, False, points, int(4 * u))
 
-    # Oreilles, puis tete.
-    for oreille in ([(8, 26), (9, 14), (18, 22)], [(40, 26), (39, 14), (30, 22)]):
+    # Corps avec un ventre clair.
+    pygame.draw.ellipse(image, contour, (int(10 * u), int(34 * u), int(28 * u), int(22 * u)))
+    pygame.draw.ellipse(image, orange, (int(12 * u), int(36 * u), int(24 * u), int(18 * u)))
+    pygame.draw.ellipse(image, clair, (int(18 * u), int(41 * u), int(12 * u), int(12 * u)))
+
+    # Oreilles puis tete.
+    for oreille in ([(9, 28), (10, 14), (21, 22)], [(39, 28), (38, 14), (27, 22)]):
         points = [p(x, y) for (x, y) in oreille]
-        pygame.draw.polygon(image, fourrure, points)
+        pygame.draw.polygon(image, orange, points)
         pygame.draw.polygon(image, contour, points, 2)
-    pygame.draw.circle(image, contour, p(24, 29), int(15 * u))
-    pygame.draw.circle(image, fourrure, p(24, 29), int(13 * u))
+    pygame.draw.circle(image, contour, p(24, 30), int(16 * u))
+    pygame.draw.circle(image, orange, p(24, 30), int(14 * u))
+    pygame.draw.ellipse(image, clair, (int(16 * u), int(33 * u), int(16 * u), int(11 * u)))
 
-    # Yeux bleus, nez rose.
-    pygame.draw.circle(image, (60, 120, 190), p(18, 31), int(3 * u))
-    pygame.draw.circle(image, (60, 120, 190), p(30, 31), int(3 * u))
-    pygame.draw.circle(image, (255, 150, 160), p(24, 35), int(2 * u))
+    # Grands yeux verts, nez rose.
+    for x in (17, 31):
+        pygame.draw.circle(image, (255, 255, 255), p(x, 31), int(4 * u))
+        pygame.draw.circle(image, (60, 160, 80), p(x, 31), int(3 * u))
+        pygame.draw.circle(image, (20, 20, 20), p(x, 31), int(1.5 * u) + 1)
+    pygame.draw.circle(image, (255, 130, 150), p(24, 37), int(2 * u) + 1)
 
     # Chapeau vert pointu avec un bandeau clair.
-    vert = (50, 160, 60)
-    sombre = (20, 85, 30)
-    chapeau = [p(9, 24), p(39, 24), p(36, 12), p(33, 3), p(21, 8)]
-    pygame.draw.polygon(image, vert, chapeau)
-    pygame.draw.polygon(image, sombre, chapeau, 2)
-    pygame.draw.rect(image, (235, 220, 120), (int(9 * u), int(21 * u), int(30 * u), int(5 * u)))
+    chapeau = [p(9, 26), p(39, 26), p(36, 13), p(33, 3), p(21, 9)]
+    pygame.draw.polygon(image, (50, 160, 60), chapeau)
+    pygame.draw.polygon(image, (20, 85, 30), chapeau, 2)
+    pygame.draw.rect(image, (235, 220, 120), (int(9 * u), int(23 * u), int(30 * u), int(5 * u)))
     return image
 
 
@@ -100,7 +112,9 @@ def load_sprites(taille):
     props = charger_feuille("TX Props.png")
     sprites["caisse"] = decouper(props, 160, 18, 32, 23, taille)
 
-    sprites["joueur"] = creer_joueur(taille)
+    sprites["joueur"] = creer_joueur(taille, 0)
+    sprites["joueur_queue1"] = creer_joueur(taille, 1)    # positions de la queue qui bouge
+    sprites["joueur_queue2"] = creer_joueur(taille, 2)
 
     # Decor autour du niveau : feuilles "avec ombres", proportions gardees (on fixe la hauteur).
     props_ombres = charger_feuille("TX Props with Shadow.png", DOSSIER_OMBRES)
@@ -112,49 +126,92 @@ def load_sprites(taille):
     for k in range(len(touffes)):
         x, y, largeur, hauteur = touffes[k]
         sprites["touffe" + str(k)] = decouper_hauteur(plantes_sans_ombre, x, y, largeur, hauteur, hauteur * 2)
-    sprites["vase"] = decouper_hauteur(props_ombres, 160, 210, 36, 46, taille)
-    sprites["statue"] = decouper_hauteur(props_ombres, 440, 14, 52, 84, taille * 2)
-    sprites["lanterne"] = decouper_hauteur(props_ombres, 446, 110, 36, 50, taille * 6 // 5)
+    # Decor garde : totem, tonneau, tombe, caisses de decor, et la porte de sortie.
+    # (rectangles trouves en regardant les feuilles, hauteur voulue ensuite ; les proportions sont gardees)
     sprites["totem"] = decouper_hauteur(props_ombres, 348, 170, 44, 90, taille * 2)
-    sprites["coffre"] = decouper_hauteur(props_ombres, 94, 26, 40, 40, taille)
     sprites["tonneau"] = decouper_hauteur(props_ombres, 160, 150, 36, 42, taille)
-    sprites["panneau"] = decouper_hauteur(props_ombres, 94, 156, 36, 42, taille)
     sprites["tombe"] = decouper_hauteur(props_ombres, 222, 236, 40, 48, taille)
-    sprites["banc"] = decouper_hauteur(props_ombres, 288, 16, 66, 46, taille)
-    # Variantes (memes familles d'objets, autres formes), rectangles lus avec voir_assets.py.
-    sprites["banc2"] = decouper_hauteur(props_ombres, 286, 85, 74, 44, taille)
-    sprites["vase2"] = decouper_hauteur(props_ombres, 162, 286, 35, 35, taille)
-    sprites["vase3"] = decouper_hauteur(props_ombres, 163, 346, 31, 40, taille)
-    sprites["tombe2"] = decouper_hauteur(props_ombres, 287, 249, 38, 35, taille)
-    sprites["stele"] = decouper_hauteur(props_ombres, 225, 7, 34, 58, taille * 3 // 2)
-    sprites["totem2"] = decouper_hauteur(props_ombres, 414, 192, 40, 61, taille * 3 // 2)
-    sprites["rocher"] = decouper_hauteur(props_ombres, 1, 428, 66, 50, taille)
-    # Autres variantes du pack : (nom, rectangle, hauteur voulue).
-    autres = [
-        ("coffre2", (94, 74, 38, 54), taille),
-        ("panneau2", (94, 222, 34, 36), taille),
-        ("stele2", (225, 89, 34, 70), taille * 3 // 2),
-        ("stele3", (225, 181, 34, 42), taille),
-        ("tombe3", (225, 301, 34, 44), taille),
-        ("tombe4", (286, 304, 38, 50), taille),
-        ("sarcophage", (286, 156, 38, 61), taille * 3 // 2),
-        ("dalle_haute", (385, 0, 34, 65), taille * 3 // 2),
-        ("dalle_haute2", (385, 96, 34, 65), taille * 3 // 2),
-        ("ruine", (418, 357, 61, 53), taille),
-        ("caisses", (158, 16, 40, 54), taille * 3 // 2),
-        ("caisse_petite", (161, 84, 32, 44), taille),
-        ("porte", (27, 101, 42, 54), taille * 5 // 4),   # sert de sortie du niveau (voir gui.py)
-        ("porte_ouverte", (27, 164, 42, 58), taille * 5 // 4),
-    ]
-    for nom, rect, hauteur_voulue in autres:
-        sprites[nom] = decouper_hauteur(props_ombres, rect[0], rect[1], rect[2], rect[3], hauteur_voulue)
+    sprites["caisses"] = decouper_hauteur(props_ombres, 158, 16, 40, 54, taille * 3 // 2)
+    sprites["caisse_petite"] = decouper_hauteur(props_ombres, 161, 84, 32, 44, taille)
+    sprites["porte"] = decouper_hauteur(props_ombres, 27, 101, 42, 54, taille * 5 // 4)   # sortie du niveau
+    sprites["porte_ouverte"] = decouper_hauteur(props_ombres, 27, 164, 42, 58, taille * 5 // 4)
 
-    # Arches et escaliers de la feuille des structures.
+    # Arche en pierre (feuille des structures) : elle encadre seulement la porte de sortie.
     structures = charger_feuille("TX Struct.png")
-    sprites["arche"] = decouper_hauteur(structures, 408, 27, 80, 64, taille * 3 // 2)
-    sprites["arche_porte"] = decouper_hauteur(structures, 408, 27, 80, 64, taille * 2)   # encadre la porte de sortie
-    sprites["arche2"] = decouper_hauteur(structures, 416, 128, 64, 64, taille * 3 // 2)
-    sprites["escalier"] = decouper_hauteur(structures, 48, 288, 90, 96, taille * 3 // 2)
-    sprites["escalier2"] = decouper_hauteur(structures, 176, 288, 90, 96, taille * 3 // 2)
+    sprites["arche_porte"] = decouper_hauteur(structures, 408, 27, 80, 64, taille * 2)
 
     return sprites
+
+
+# ---------------------------------------------------------------------------------------------
+# Sons : ils sont calcules par le code, echantillon par echantillon,
+# il n'y a aucun fichier audio. Un echantillon = un nombre entre -32767 et 32767.
+
+
+def faire_son(echantillons):
+    # Transforme une liste de valeurs entre -1 et 1 en son pygame (16 bits signes).
+    # Si le mixer est en stereo, on ecrit chaque echantillon deux fois (gauche et droite).
+    canaux = pygame.mixer.get_init()[2]
+    donnees = array("h")
+    for valeur in echantillons:
+        valeur = max(-1.0, min(1.0, valeur))
+        for k in range(canaux):
+            donnees.append(int(valeur * 32767))
+    return pygame.mixer.Sound(buffer=donnees.tobytes())
+
+
+def creer_ambiance(frequence):
+    # Ambiance de prairie de 6 secondes, jouee en boucle : du vent (bruit aleatoire adouci)
+    # qui monte et descend, et quelques chants d'oiseau.
+    duree = 6.0
+    total = int(frequence * duree)
+    hasard = random.Random(7)       # graine fixe : le son est toujours le meme
+    echantillons = []
+    adouci = 0.0
+    for i in range(total):
+        t = i / float(frequence)
+        # Le vent : on adoucit le bruit (filtre passe-bas tout simple) pour qu'il souffle au lieu de gresiller.
+        adouci = adouci + 0.03 * (hasard.uniform(-1, 1) - adouci)
+        # Le volume du vent passe par 0 au debut et a la fin : la boucle ne fait pas de "clic".
+        rafale = math.sin(math.pi * t / duree) ** 2
+        echantillons.append(adouci * 1.6 * (0.3 + 0.7 * rafale))
+
+    # Chants d'oiseau : de petits "cui" (note qui monte vite), a deux moments de la boucle.
+    for debut in (1.3, 1.5, 1.7, 4.2, 4.4):
+        depart = int(debut * frequence)
+        longueur = int(0.09 * frequence)
+        phase = 0.0
+        for i in range(longueur):
+            avance = i / float(longueur)
+            note = 2600 + 1400 * avance
+            phase = phase + 2 * math.pi * note / frequence
+            enveloppe = math.sin(math.pi * avance)
+            echantillons[depart + i] = echantillons[depart + i] + 0.12 * enveloppe * math.sin(phase)
+    return faire_son(echantillons)
+
+
+def creer_pas(frequence):
+    # Bruit de pas : un petit "pof" tres court (bruit adouci qui s'eteint vite).
+    total = int(frequence * 0.08)
+    hasard = random.Random(3)
+    echantillons = []
+    adouci = 0.0
+    for i in range(total):
+        adouci = adouci + 0.25 * (hasard.uniform(-1, 1) - adouci)
+        enveloppe = math.exp(-i / (total / 5.0))
+        echantillons.append(adouci * 1.2 * enveloppe)
+    return faire_son(echantillons)
+
+
+def load_sounds():
+    # Retourne un dictionnaire de sons, ou un dictionnaire vide si l'ordinateur n'a pas de son
+    # (le jeu marche alors sans son). Doit etre appele apres pygame.init().
+    if not pygame.mixer.get_init():
+        return {}
+    frequence = pygame.mixer.get_init()[0]
+    sons = {}
+    sons["ambiance"] = creer_ambiance(frequence)
+    sons["pas"] = creer_pas(frequence)
+    sons["ambiance"].set_volume(0.35)
+    sons["pas"].set_volume(0.5)
+    return sons

@@ -1,6 +1,6 @@
 # Point d'entree du programme.
-# Usage : python main.py           -> lance l'interface graphique (Pygame)
-#         python main.py --niveau N -> affiche le niveau numero N (1 a 8)
+# Usage : python main.py           -> lance l'interface graphique (Pygame), en commencant par le menu
+#         python main.py --niveau N -> ouvre directement le niveau numero N (1 a 8)
 #         python main.py --console -> mode console : BFS sur tous les niveaux
 
 import sys
@@ -14,9 +14,9 @@ from gui import Game
 
 def resoudre_niveau(niveau):
     # Lance le BFS sur un niveau et retourne (noeud but ou None, temps en secondes).
-    etatInitial = SokobanPuzzle(niveau["grid"])
+    etat_initial = SokobanPuzzle(niveau["grid"])
     debut = time.time()
-    noeud = BFS(etatInitial, lambda st: st.successorFunction(), lambda st: st.isGoal())
+    noeud = BFS(etat_initial, lambda st: st.successorFunction(), lambda st: st.isGoal())
     duree = time.time() - debut
     return noeud, duree
 
@@ -41,11 +41,19 @@ def main():
     if "--console" in sys.argv:
         mode_console()
     else:
-        # Option : python main.py --niveau 3 affiche le niveau numero 3 (1 = Exemple 1).
+        # Sans option, le jeu commence par le menu de choix du niveau.
+        # Option : python main.py --niveau 3 ouvre directement le niveau numero 3 (1 = Exemple 1).
         numero = 0
+        menu = True
         if "--niveau" in sys.argv:
-            numero = int(sys.argv[sys.argv.index("--niveau") + 1]) - 1
-        jeu = Game(numero)
+            position = sys.argv.index("--niveau") + 1
+            # On verifie que le numero existe, sinon on explique au lieu de planter.
+            if position >= len(sys.argv) or not sys.argv[position].isdigit() or not 1 <= int(sys.argv[position]) <= len(LEVELS):
+                print("Usage : python main.py --niveau N   (N entre 1 et " + str(len(LEVELS)) + ")")
+                return
+            numero = int(sys.argv[position]) - 1
+            menu = False
+        jeu = Game(numero, menu)
         jeu.run()
 
 
