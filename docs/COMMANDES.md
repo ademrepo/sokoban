@@ -11,9 +11,16 @@ pip install pygame-ce
 ```
 python main.py
 ```
-Ouvre la fenêtre sur le niveau 1 (Exemple 1).
+Ouvre la fenêtre sur le menu de choix du niveau.
 
-## Lancer directement un niveau
+## Menu de choix du niveau
+| Touche / bouton | Effet |
+|---|---|
+| Flèches (ou souris) | Choisir un niveau |
+| Entrée, espace ou clic | Jouer le niveau choisi |
+| Échap | Quitter |
+
+## Lancer directement un niveau (sans passer par le menu)
 ```
 python main.py --niveau 5
 ```
@@ -37,6 +44,7 @@ Remplacer 5 par le numéro du niveau :
 | R ou bouton « Recommencer » | Recommencer le niveau |
 | B ou bouton « Résoudre (BFS) » | Lancer le BFS : trace la trajectoire et joue la solution tout seul |
 | Une flèche pendant la lecture | Arrête la lecture automatique |
+| M ou bouton « Menu » | Revenir au menu de choix du niveau |
 | Échap | Quitter |
 
 Quand toutes les caisses sont sur les cibles : la porte s'ouvre avec de la lumière, la pancarte « Bravo » descend, puis on passe au niveau suivant.
