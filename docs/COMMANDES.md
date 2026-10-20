@@ -34,13 +34,13 @@ Remplacer 5 par le numéro du niveau :
 | Touche / bouton | Effet |
 |---|---|
 | Flèches | Bouger le chat (et pousser les caisses) ; garder la flèche appuyée pour avancer en continu |
-| Z ou Retour arrière | Annuler le dernier coup |
+| Z, Retour arrière ou bouton « Annuler » | Annuler le dernier coup |
 | R ou bouton « Recommencer » | Recommencer le niveau |
 | B ou bouton « Résoudre (BFS) » | Lancer le BFS : trace la trajectoire et joue la solution tout seul |
 | Une flèche pendant la lecture | Arrête la lecture automatique |
 | M ou bouton « Menu » | Retour au menu de choix du niveau |
 | S | Couper / remettre le son (ambiance de prairie et bruit de pas) |
-| Dans le menu : clic ou touche 1 à 8 | Ouvre ce niveau |
+| Dans le menu : clic, touche 1 à 8, ou flèches + Entrée | Ouvre ce niveau |
 | Échap | Quitter |
 
 Quand toutes les caisses sont sur les cibles : la porte s'ouvre avec de la lumière, le chat y va, puis la pancarte « Bravo » descend avec trois boutons : « Rejouer » (R), « Niveau suivant » (Entrée ou N) et « Menu » (M).

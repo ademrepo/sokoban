@@ -54,6 +54,19 @@ NOMBRE_LUCIOLES = 18
 DUREE_PARTICULE = 700    # duree de vie d'une etincelle ou d'un nuage de poussiere, en millisecondes
 
 
+def touche_le_sol(grille, r, c):
+    # Vrai si un des 8 voisins de (r, c) n'est pas un mur.
+    # Sert a ne dessiner que les murs du bord du labyrinthe (le reste = decor vert).
+    for dr in (-1, 0, 1):
+        for dc in (-1, 0, 1):
+            nr = r + dr
+            nc = c + dc
+            if 0 <= nr < len(grille) and 0 <= nc < len(grille[nr]):
+                if grille[nr][nc] != "O":
+                    return True
+    return False
+
+
 def creer_halo(rayon, couleur, opacite):
     # Disque flou : opaque au centre (opacite entre 0 et 255), transparent au bord.
     # On dessine des cercles de plus en plus petits et de plus en plus opaques les uns sur les autres.
@@ -124,19 +137,21 @@ class Game:
         self.son_actif = False
         self.changer_son()
 
-        # Les trois boutons de la barre d'infos (rectangles cliquables).
-        self.bouton_resoudre = pygame.Rect(14, hauteur + 52, 200, 34)
-        self.bouton_recommencer = pygame.Rect(226, hauteur + 52, 190, 34)
-        self.bouton_menu = pygame.Rect(428, hauteur + 52, 120, 34)
+        # Les quatre boutons de la barre d'infos (rectangles cliquables).
+        self.bouton_resoudre = pygame.Rect(14, hauteur + 56, 176, 34)
+        self.bouton_annuler = pygame.Rect(202, hauteur + 56, 120, 34)
+        self.bouton_recommencer = pygame.Rect(334, hauteur + 56, 150, 34)
+        self.bouton_menu = pygame.Rect(496, hauteur + 56, 106, 34)
 
-        # Boutons du menu : un par niveau, sur deux colonnes, au milieu de la zone de jeu.
+        # Cartes du menu : une par niveau, sur deux colonnes, au milieu de la zone de jeu.
         self.boutons_niveaux = []
         for i in range(len(LEVELS)):
             colonne = i % 2
             ligne = i // 2
-            x = largeur // 2 - 250 + colonne * 260
-            y = 200 + ligne * 64
-            self.boutons_niveaux.append(pygame.Rect(x, y, 240, 50))
+            x = largeur // 2 - 266 + colonne * 272
+            y = 190 + ligne * 74
+            self.boutons_niveaux.append(pygame.Rect(x, y, 260, 62))
+        self.choix_menu = 0     # carte selectionnee (souris ou fleches du clavier)
 
         # Pancarte "Bravo" (au milieu de la zone de jeu) et ses trois boutons, a leur place finale.
         centre_x = largeur // 2
@@ -148,6 +163,10 @@ class Game:
         # Le niveau est dessine sur "monde", puis recopie sur l'ecran (pratique pour faire glisser).
         self.monde = pygame.Surface((largeur, hauteur))
         self.ancien_monde = None
+        # Fond du menu (herbe et haie), dessine une seule fois.
+        self.dessiner_herbe()
+        self.dessiner_haie()
+        self.fond_menu = self.monde.copy()
         self.charger_niveau(numero)
         if menu:
             self.ouvrir_menu()
@@ -198,8 +217,10 @@ class Game:
 
     def ouvrir_menu(self):
         # Retour au menu : on arrete la solution automatique et l'animation de fin de niveau.
+        # La carte du niveau qu'on quitte est deja selectionnee.
         self.annuler_solution()
         self.ancien_monde = None
+        self.choix_menu = self.numero
         self.phase = "menu"
         pygame.display.set_caption("Sokoban - Menu")
 
@@ -266,6 +287,8 @@ class Game:
                     self.charger_niveau(self.numero)
                 if self.bouton_resoudre.collidepoint(evenement.pos) and self.phase == "jeu":
                     self.resoudre()
+                if self.bouton_annuler.collidepoint(evenement.pos) and self.phase == "jeu":
+                    self.annuler_coup()
                 if self.bouton_menu.collidepoint(evenement.pos):
                     self.ouvrir_menu()
                 if self.phase == "bravo":
@@ -291,7 +314,7 @@ class Game:
         self.dessiner_niveau()
 
     def evenement_menu(self, evenement):
-        # Dans le menu : clic sur un niveau, ou touche 1 a 8 ; Echap quitte le jeu.
+        # Dans le menu : clic sur une carte, touche 1 a 8, ou fleches + Entree ; Echap quitte le jeu.
         if evenement.type == pygame.KEYDOWN:
             if evenement.key == pygame.K_ESCAPE:
                 self.en_cours = False
@@ -301,6 +324,18 @@ class Game:
                 numero = int(evenement.unicode) - 1
                 if 0 <= numero < len(LEVELS):
                     self.charger_niveau(numero)
+            # Fleches : on se deplace dans la grille de cartes (2 colonnes).
+            deplacements = {pygame.K_LEFT: -1, pygame.K_RIGHT: 1, pygame.K_UP: -2, pygame.K_DOWN: 2}
+            if evenement.key in deplacements:
+                nouveau = self.choix_menu + deplacements[evenement.key]
+                if 0 <= nouveau < len(LEVELS):
+                    self.choix_menu = nouveau
+            if evenement.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
+                self.charger_niveau(self.choix_menu)
+        if evenement.type == pygame.MOUSEMOTION:
+            for i in range(len(self.boutons_niveaux)):
+                if self.boutons_niveaux[i].collidepoint(evenement.pos):
+                    self.choix_menu = i
         if evenement.type == pygame.MOUSEBUTTONDOWN and evenement.button == 1:
             for i in range(len(self.boutons_niveaux)):
                 if self.boutons_niveaux[i].collidepoint(evenement.pos):
@@ -463,19 +498,6 @@ class Game:
         chemin.reverse()
         return chemin
 
-    def touche_le_sol(self, r, c):
-        # Vrai si un des 8 voisins de (r, c) n'est pas un mur.
-        # Sert a ne dessiner que les murs du bord du labyrinthe (le reste = decor vert).
-        grille = self.etat.grid
-        for dr in (-1, 0, 1):
-            for dc in (-1, 0, 1):
-                nr = r + dr
-                nc = c + dc
-                if 0 <= nr < len(grille) and 0 <= nc < len(grille[nr]):
-                    if grille[nr][nc] != "O":
-                        return True
-        return False
-
     def trouver_porte(self):
         # La porte de sortie est posee sur un mur visible du haut du niveau, avec du sol juste en dessous
         # (de preference au milieu). Retourne (ligne, colonne) ou None. C'est seulement un dessin :
@@ -485,7 +507,7 @@ class Game:
         meilleure = None
         for r in range(len(grille) - 1):
             for c in range(len(grille[r])):
-                if grille[r][c] == "O" and self.touche_le_sol(r, c) and grille[r + 1][c] != "O":
+                if grille[r][c] == "O" and touche_le_sol(grille, r, c) and grille[r + 1][c] != "O":
                     if meilleure is None or r < meilleure[0] or (r == meilleure[0] and abs(c - milieu) < abs(meilleure[1] - milieu)):
                         meilleure = (r, c)
         return meilleure
@@ -498,7 +520,7 @@ class Game:
         c = wc - self.decalage_colonne
         if r < 0 or r >= len(grille) or c < 0 or c >= len(grille[r]):
             return True
-        return grille[r][c] == "O" and not self.touche_le_sol(r, c)
+        return grille[r][c] == "O" and not touche_le_sol(grille, r, c)
 
     def dessiner_cible(self, x, y, allumee):
         # La cible est une plaque de pierre carree avec un contour dore (dessinee avec pygame.draw,
@@ -530,7 +552,7 @@ class Game:
         grille = self.etat.grid
         if r < 0 or r >= len(grille) or c < 0 or c >= len(grille[r]):
             return False
-        return grille[r][c] == "O" and self.touche_le_sol(r, c)
+        return grille[r][c] == "O" and touche_le_sol(grille, r, c)
 
     def poser(self, nom, wr, wc, ombre=False):
         # Pose un objet du decor, les pieds en bas de la case (wr, wc) de la zone de jeu, centre sur la colonne.
@@ -662,7 +684,7 @@ class Game:
             for c in range(len(grille[r])):
                 x, y = self.ecran_case(r, c)
                 if grille[r][c] == "O":
-                    if self.touche_le_sol(r, c):
+                    if touche_le_sol(grille, r, c):
                         self.monde.blit(self.sprites["mur" + str(1 + (r + c) % 2)], (x, y))
                 else:
                     # Toutes les autres cases sont du sol de jeu (dalle de pierre) ; l'herbe reste a l'exterieur.
@@ -859,18 +881,17 @@ class Game:
         largeur = planche.width
         hauteur = planche.height
 
-        # Deux poteaux, puis la planche avec son contour et ses veines.
+        # Deux poteaux, puis la planche en bois.
         pygame.draw.rect(self.ecran, (95, 60, 30), (x + 50, y + hauteur - 10, 24, 50))
         pygame.draw.rect(self.ecran, (95, 60, 30), (x + largeur - 74, y + hauteur - 10, 24, 50))
-        pygame.draw.rect(self.ecran, (150, 100, 52), planche, 0, 10)
-        pygame.draw.rect(self.ecran, (85, 52, 25), planche, 5, 10)
-        for k in range(1, 4):
-            pygame.draw.line(self.ecran, (125, 80, 40), (x + 8, y + k * hauteur // 4), (x + largeur - 8, y + k * hauteur // 4), 2)
+        self.dessiner_planche(planche, 12)
 
-        titre = self.ecrire("BRAVO !", 56, (255, 240, 200))
-        texte = self.ecrire("Niveau " + str(self.numero + 1) + " reussi en " + str(self.coups) + " coups", 20, (255, 240, 200))
-        self.ecran.blit(titre, (x + (largeur - titre.get_width()) // 2, y + 12))
-        self.ecran.blit(texte, (x + (largeur - texte.get_width()) // 2, y + 80))
+        texte_titre = "BRAVO !"
+        texte = "Niveau " + str(self.numero + 1) + " reussi en " + str(self.coups) + " coups"
+        titre = self.ecrire(texte_titre, 56, (255, 235, 170))
+        ligne = self.ecrire(texte, 20, (255, 240, 200))
+        self.ecrire_ombre(texte_titre, 56, (255, 235, 170), x + (largeur - titre.get_width()) // 2, y + 12)
+        self.ecrire_ombre(texte, 20, (255, 240, 200), x + (largeur - ligne.get_width()) // 2, y + 80)
 
         # Les boutons suivent la pancarte pendant qu'elle descend.
         nom_suivant = "Niveau suivant"
@@ -880,56 +901,119 @@ class Game:
         self.dessiner_bouton(self.bouton_suivant.move(0, decalage), nom_suivant)
         self.dessiner_bouton(self.bouton_menu_bravo.move(0, decalage), "Menu")
 
+    def ecrire_ombre(self, texte, taille, couleur, x, y):
+        # Ecrit un texte avec une ombre noire decalee de 2 pixels (plus lisible sur le bois et l'herbe).
+        self.ecran.blit(self.ecrire(texte, taille, (40, 25, 10)), (x + 2, y + 2))
+        self.ecran.blit(self.ecrire(texte, taille, couleur), (x, y))
+
+    def dessiner_planche(self, rectangle, arrondi):
+        # Planche en bois : ombre portee, bois avec des veines, contour fonce et filet clair en haut.
+        ombre = pygame.Surface((rectangle.width, rectangle.height), pygame.SRCALPHA)
+        pygame.draw.rect(ombre, (0, 0, 0, 90), ombre.get_rect(), 0, arrondi)
+        self.ecran.blit(ombre, (rectangle.x + 5, rectangle.y + 6))
+        pygame.draw.rect(self.ecran, (150, 100, 52), rectangle, 0, arrondi)
+        for k in range(1, rectangle.height // 22 + 1):
+            y = rectangle.y + k * 22
+            pygame.draw.line(self.ecran, (135, 88, 44), (rectangle.x + 10, y), (rectangle.right - 10, y), 2)
+        pygame.draw.line(self.ecran, (190, 140, 85), (rectangle.x + arrondi, rectangle.y + 3), (rectangle.right - arrondi, rectangle.y + 3), 2)
+        pygame.draw.rect(self.ecran, (85, 52, 25), rectangle, 4, arrondi)
+
+    def dessiner_apercu(self, grille, x, y, cote):
+        # Petite carte du niveau : une case = un carre de cote pixels (murs du bord seulement).
+        couleurs = {"O": (110, 95, 80), " ": (190, 185, 170), "S": (235, 180, 60), "B": (170, 110, 50),
+                    "*": (110, 190, 90), "R": (240, 140, 60), ".": (240, 140, 60)}
+        for r in range(len(grille)):
+            for c in range(len(grille[r])):
+                case = grille[r][c]
+                if case != "O" or touche_le_sol(grille, r, c):
+                    pygame.draw.rect(self.ecran, couleurs[case], (x + c * cote, y + r * cote, cote, cote))
+
     def dessiner_menu(self):
-        # Menu : herbe et haie en fond, une grande planche en bois avec le titre et un bouton par niveau.
-        self.dessiner_herbe()
-        self.dessiner_haie()
-        largeur = self.monde.get_width()
-        planche = pygame.Rect(largeur // 2 - 280, 70, 560, 150 + 64 * ((len(LEVELS) + 1) // 2))
-        pygame.draw.rect(self.monde, (150, 100, 52), planche, 0, 12)
-        pygame.draw.rect(self.monde, (85, 52, 25), planche, 5, 12)
-        titre = self.ecrire("SOKOBAN", 56, (255, 240, 200))
-        texte = self.ecrire("Choisis un niveau", 24, (255, 240, 200))
-        self.monde.blit(titre, (largeur // 2 - titre.get_width() // 2, 90))
-        self.monde.blit(texte, (largeur // 2 - texte.get_width() // 2, 155))
+        # Menu : herbe et haie (avec les nuages et les lucioles), une grande planche avec le titre,
+        # puis une carte par niveau : apercu du niveau, numero et nom.
+        self.monde.blit(self.fond_menu, (0, 0))
+        self.dessiner_effets()
         self.ecran.blit(self.monde, (0, 0))
+        self.ecran.blit(self.vignette, (0, 0))
+
+        largeur = self.monde.get_width()
+        lignes = (len(LEVELS) + 1) // 2
+        self.dessiner_planche(pygame.Rect(largeur // 2 - 290, 60, 580, 130 + 74 * lignes + 10), 14)
+        titre = self.ecrire("SOKOBAN", 64, (255, 235, 170))
+        self.ecrire_ombre("SOKOBAN", 64, (255, 235, 170), largeur // 2 - titre.get_width() // 2, 74)
+        sous_titre = self.ecrire("Choisis un niveau", 22, (255, 240, 200))
+        self.ecrire_ombre("Choisis un niveau", 22, (255, 240, 200), largeur // 2 - sous_titre.get_width() // 2, 146)
 
         for i in range(len(LEVELS)):
-            nom = str(i + 1) + " - " + LEVELS[i]["name"]
-            self.dessiner_bouton(self.boutons_niveaux[i], nom)
+            carte = self.boutons_niveaux[i]
+            choisie = i == self.choix_menu
+            if choisie:
+                carte = carte.move(0, -3)       # la carte choisie se souleve un peu
+            fond = (120, 78, 38)
+            if choisie:
+                fond = (175, 120, 65)
+            pygame.draw.rect(self.ecran, (60, 38, 18), carte.move(0, 4), 0, 8)     # epaisseur sous la carte
+            pygame.draw.rect(self.ecran, fond, carte, 0, 8)
+            bord = (200, 160, 100)
+            if choisie:
+                bord = (255, 225, 120)
+            pygame.draw.rect(self.ecran, bord, carte, 3, 8)
+
+            # Apercu du niveau a gauche de la carte, centre dans un carre de 50 x 50.
+            grille = LEVELS[i]["grid"]
+            cote = 50 // max(len(grille), len(grille[0]))
+            self.dessiner_apercu(grille, carte.x + 8 + (50 - cote * len(grille[0])) // 2, carte.y + 6 + (50 - cote * len(grille)) // 2, cote)
+            self.ecrire_ombre(str(i + 1), 28, (255, 225, 120), carte.x + 70, carte.y + 14)
+            self.ecrire_ombre(LEVELS[i]["name"], 18, (255, 245, 215), carte.x + 108, carte.y + 21)
 
     def dessiner_bouton(self, rectangle, texte):
-        # Bouton en bois ; celui qui est sous la souris est un peu plus clair.
+        # Bouton en bois avec un peu de relief : plus clair sous la souris, enfonce quand on clique.
+        souris = pygame.mouse.get_pos()
+        survole = rectangle.collidepoint(souris)
+        enfonce = survole and pygame.mouse.get_pressed()[0]
         couleur = (150, 100, 52)
-        if rectangle.collidepoint(pygame.mouse.get_pos()):
+        if survole:
             couleur = (185, 128, 70)
+        pygame.draw.rect(self.ecran, (60, 38, 18), rectangle.move(0, 3), 0, 8)    # epaisseur du bouton
+        if enfonce:
+            rectangle = rectangle.move(0, 2)
         pygame.draw.rect(self.ecran, couleur, rectangle, 0, 8)
-        pygame.draw.rect(self.ecran, (230, 200, 130), rectangle, 3, 8)
+        pygame.draw.line(self.ecran, (215, 165, 105), (rectangle.x + 8, rectangle.y + 3), (rectangle.right - 8, rectangle.y + 3), 2)
+        pygame.draw.rect(self.ecran, (230, 200, 130), rectangle, 2, 8)
         image = self.ecrire(texte, 16, (255, 245, 215))
         self.ecran.blit(image, (rectangle.x + (rectangle.width - image.get_width()) // 2, rectangle.y + (rectangle.height - image.get_height()) // 2))
 
     def dessiner_barre(self):
-        # Barre d'infos en bas : niveau, coups, resultat du BFS, boutons et rappel des touches.
+        # Barre d'infos en bas : niveau et coups, resultat du BFS (ou une astuce), boutons, rappel des touches.
         haut = self.monde.get_height()
         largeur = self.ecran.get_width()
-        pygame.draw.rect(self.ecran, (70, 45, 25), (0, haut, largeur, HAUTEUR_BARRE))
+        # Bois un peu plus sombre en bas qu'en haut, avec un filet dore.
+        for k in range(HAUTEUR_BARRE):
+            sombre = k * 25 // HAUTEUR_BARRE
+            pygame.draw.line(self.ecran, (82 - sombre, 54 - sombre // 2, 30 - sombre // 3), (0, haut + k), (largeur, haut + k))
         pygame.draw.line(self.ecran, (230, 200, 130), (0, haut), (largeur, haut), 3)
+        pygame.draw.line(self.ecran, (120, 80, 40), (0, haut + 3), (largeur, haut + 3), 2)
 
         if self.phase == "menu":
-            self.ecran.blit(self.ecrire("Menu", 18, (255, 245, 215)), (14, haut + 6))
-            aide = "Clic sur un niveau ou touche 1 a " + str(len(LEVELS)) + "   S : son   Echap : quitter"
-            self.ecran.blit(self.ecrire(aide, 14, (220, 200, 170)), (14, haut + 92))
+            self.ecrire_ombre("Menu", 20, (255, 235, 170), 14, haut + 12)
+            self.ecrire_ombre("Clic, touche 1 a " + str(len(LEVELS)) + ", ou fleches + Entree", 16, (255, 245, 215), 14, haut + 44)
+            self.ecrire_ombre("S : son   Echap : quitter", 14, (220, 200, 170), 14, haut + 88)
             return
 
-        titre = "Niveau " + str(self.numero + 1) + "  -  Coups : " + str(self.coups)
-        self.ecran.blit(self.ecrire(titre, 18, (255, 245, 215)), (14, haut + 6))
-        self.ecran.blit(self.ecrire(self.resultat, 18, (255, 225, 120)), (14, haut + 28))
-        aide = "Fleches: bouger  Z: annuler  R: rejouer  B: BFS  M: menu  S: son"
-        self.ecran.blit(self.ecrire(aide, 14, (220, 200, 170)), (14, haut + 92))
+        self.ecrire_ombre("Niveau " + str(self.numero + 1) + " / " + str(len(LEVELS)) + "  " + self.niveau["name"], 18, (255, 235, 170), 14, haut + 10)
+        coups = self.ecrire("Coups : " + str(self.coups), 18, (255, 245, 215))
+        self.ecrire_ombre("Coups : " + str(self.coups), 18, (255, 245, 215), largeur - coups.get_width() - 14, haut + 10)
+        if self.resultat != "":
+            self.ecrire_ombre(self.resultat, 16, (130, 225, 255), 14, haut + 34)
+        else:
+            self.ecrire_ombre("Astuce : B pour voir la solution du BFS", 16, (220, 200, 170), 14, haut + 34)
 
         self.dessiner_bouton(self.bouton_resoudre, "Resoudre (BFS)")
+        self.dessiner_bouton(self.bouton_annuler, "Annuler")
         self.dessiner_bouton(self.bouton_recommencer, "Recommencer")
         self.dessiner_bouton(self.bouton_menu, "Menu")
+        aide = "Fleches: bouger  Z: annuler  R: rejouer  B: BFS  M: menu  S: son"
+        self.ecran.blit(self.ecrire(aide, 12, (210, 185, 150)), (14, haut + 96))
 
     def draw(self):
         ecoule = pygame.time.get_ticks() - self.debut_phase
