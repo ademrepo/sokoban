@@ -5,7 +5,7 @@
 #            une pancarte "Bravo" glisse dans l'ecran, puis l'ecran glisse vers le niveau suivant.
 # Etape 8  : bouton "Resoudre (BFS)" qui affiche le cout, le nombre de pas et le temps de calcul.
 # Etape 9  : apres le BFS, trajectoire tracee et lecture automatique de la solution.
-# Les etapes suivantes (11 : menu de choix du niveau) viendront ensuite.
+# Etape 11 : menu de choix du niveau (au lancement, ou touche M / bouton "Menu").
 
 import math
 import time
@@ -46,8 +46,9 @@ COULEUR_TRAJET = (90, 210, 255)
 
 class Game:
 
-    def __init__(self, numero=0):
+    def __init__(self, numero=0, menu=True):
         # numero : position du niveau dans LEVELS (0 = Exemple 1).
+        # menu : vrai pour commencer par le menu de choix du niveau.
         pygame.init()
 
         # La zone de jeu a toujours la meme taille : celle du plus grand niveau + la marge.
@@ -69,14 +70,26 @@ class Game:
         self.sprites = load_sprites(TAILLE)
         self.polices = {}     # polices deja creees, rangees par taille (voir ecrire)
 
-        # Les deux boutons de la barre d'infos (rectangles cliquables).
-        self.bouton_resoudre = pygame.Rect(14, hauteur + 52, 230, 34)
-        self.bouton_recommencer = pygame.Rect(260, hauteur + 52, 230, 34)
+        # Les trois boutons de la barre d'infos (rectangles cliquables).
+        self.bouton_resoudre = pygame.Rect(14, hauteur + 52, 200, 34)
+        self.bouton_recommencer = pygame.Rect(226, hauteur + 52, 190, 34)
+        self.bouton_menu = pygame.Rect(428, hauteur + 52, 120, 34)
+
+        # Boutons du menu : un par niveau, sur deux colonnes, au milieu de la zone de jeu.
+        self.boutons_niveaux = []
+        for i in range(len(LEVELS)):
+            colonne = i % 2
+            ligne = i // 2
+            x = largeur // 2 - 250 + colonne * 260
+            y = 200 + ligne * 64
+            self.boutons_niveaux.append(pygame.Rect(x, y, 240, 50))
 
         # Le niveau est dessine sur "monde", puis recopie sur l'ecran (pratique pour faire glisser).
         self.monde = pygame.Surface((largeur, hauteur))
         self.ancien_monde = None
         self.charger_niveau(numero)
+        if menu:
+            self.ouvrir_menu()
 
         self.horloge = pygame.time.Clock()
         self.en_cours = True
@@ -89,7 +102,8 @@ class Game:
         # Position du coin haut gauche du niveau dans la zone de jeu, en cases (niveau centre).
         self.decalage_colonne = (self.cases_largeur - len(self.etat.grid[0])) // 2
         self.decalage_ligne = (self.cases_hauteur - len(self.etat.grid)) // 2
-        # Phase : "jeu", "ouverture" (porte + lumiere), "bravo" (pancarte), "glisse" (vers le niveau suivant).
+        # Phase : "menu" (choix du niveau), "jeu", puis la fin de niveau : "ouverture" (porte + lumiere),
+        # "marche" et "queue" (le chat va a la porte), "bravo" (pancarte), "glisse" (vers le niveau suivant).
         self.phase = "jeu"
         self.debut_phase = 0
         self.debut_victoire = 0    # moment ou la porte s'est ouverte (pour la lumiere)
@@ -97,6 +111,13 @@ class Game:
         self.coups = 0          # nombre de deplacements faits a la main
         self.annuler_solution()
         pygame.display.set_caption("Sokoban - Niveau " + str(numero + 1))
+
+    def ouvrir_menu(self):
+        # Retour au menu : on arrete la solution automatique et l'animation de fin de niveau.
+        self.annuler_solution()
+        self.ancien_monde = None
+        self.phase = "menu"
+        pygame.display.set_caption("Sokoban - Menu")
 
     def annuler_solution(self):
         # Efface la solution du BFS et arrete la lecture automatique.
@@ -127,22 +148,42 @@ class Game:
         for evenement in pygame.event.get():
             if evenement.type == pygame.QUIT:
                 self.en_cours = False
-            if evenement.type == pygame.KEYDOWN:
+            elif self.phase == "menu":
+                self.evenement_menu(evenement)
+            elif evenement.type == pygame.KEYDOWN:
                 if evenement.key == pygame.K_ESCAPE:
                     self.en_cours = False
                 if evenement.key == pygame.K_r:
                     self.charger_niveau(self.numero)
+                if evenement.key == pygame.K_m:
+                    self.ouvrir_menu()
                 if evenement.key == pygame.K_b and self.phase == "jeu":
                     self.resoudre()
                 if evenement.key in TOUCHES and self.phase == "jeu":
                     # Jouer a la main arrete la solution automatique (la position change).
                     self.annuler_solution()
                     self.bouger(TOUCHES[evenement.key])
-            if evenement.type == pygame.MOUSEBUTTONDOWN and evenement.button == 1:
+            elif evenement.type == pygame.MOUSEBUTTONDOWN and evenement.button == 1:
                 if self.bouton_recommencer.collidepoint(evenement.pos):
                     self.charger_niveau(self.numero)
                 if self.bouton_resoudre.collidepoint(evenement.pos) and self.phase == "jeu":
                     self.resoudre()
+                if self.bouton_menu.collidepoint(evenement.pos):
+                    self.ouvrir_menu()
+
+    def evenement_menu(self, evenement):
+        # Dans le menu : clic sur un niveau, ou touche 1 a 8 ; Echap quitte le jeu.
+        if evenement.type == pygame.KEYDOWN:
+            if evenement.key == pygame.K_ESCAPE:
+                self.en_cours = False
+            if evenement.unicode.isdigit():
+                numero = int(evenement.unicode) - 1
+                if 0 <= numero < len(LEVELS):
+                    self.charger_niveau(numero)
+        if evenement.type == pygame.MOUSEBUTTONDOWN and evenement.button == 1:
+            for i in range(len(self.boutons_niveaux)):
+                if self.boutons_niveaux[i].collidepoint(evenement.pos):
+                    self.charger_niveau(i)
 
     def bouger(self, action):
         # Deplacement a la main. On ne re-ecrit AUCUNE regle ici : on demande a successorFunction
@@ -376,10 +417,7 @@ class Game:
             pygame.draw.circle(self.monde, COULEUR_TRAJET, points[-1], 10)
             pygame.draw.circle(self.monde, (255, 255, 255), points[-1], 10, 3)
 
-    def dessiner_niveau(self):
-        # Dessine tout le niveau sur self.monde : herbe, haie, decor, murs, sol, cibles, caisses, chat, porte.
-        grille = self.etat.grid
-
+    def dessiner_herbe(self):
         # Fond : de l'herbe partout (avec quelques fleurs et touffes).
         for r in range(self.cases_hauteur):
             for c in range(self.cases_largeur):
@@ -391,6 +429,10 @@ class Game:
                     touffe = self.sprites["touffe" + str((r + c) % 5)]
                     self.monde.blit(touffe, (c * TAILLE + TAILLE // 4, r * TAILLE + TAILLE // 2))
 
+    def dessiner_niveau(self):
+        # Dessine tout le niveau sur self.monde : herbe, haie, decor, murs, sol, cibles, caisses, chat, porte.
+        grille = self.etat.grid
+        self.dessiner_herbe()
         self.dessiner_haie()
         self.dessiner_decor()
 
@@ -516,8 +558,32 @@ class Game:
         self.ecran.blit(titre, (x + (largeur - titre.get_width()) // 2, y + 14))
         self.ecran.blit(texte, (x + (largeur - texte.get_width()) // 2, y + 82))
 
-    def dessiner_bouton(self, rectangle, texte):
-        pygame.draw.rect(self.ecran, (150, 100, 52), rectangle, 0, 8)
+    def dessiner_menu(self):
+        # Menu : herbe et haie en fond, une grande planche en bois avec le titre et un bouton par niveau.
+        self.dessiner_herbe()
+        self.dessiner_haie()
+        largeur = self.monde.get_width()
+        planche = pygame.Rect(largeur // 2 - 280, 70, 560, 150 + 64 * ((len(LEVELS) + 1) // 2))
+        pygame.draw.rect(self.monde, (150, 100, 52), planche, 0, 12)
+        pygame.draw.rect(self.monde, (85, 52, 25), planche, 5, 12)
+        titre = self.ecrire("SOKOBAN", 56, (255, 240, 200))
+        texte = self.ecrire("Choisis un niveau", 24, (255, 240, 200))
+        self.monde.blit(titre, (largeur // 2 - titre.get_width() // 2, 90))
+        self.monde.blit(texte, (largeur // 2 - texte.get_width() // 2, 155))
+        self.ecran.blit(self.monde, (0, 0))
+
+        # Le bouton sous la souris est un peu plus clair.
+        souris = pygame.mouse.get_pos()
+        for i in range(len(LEVELS)):
+            rectangle = self.boutons_niveaux[i]
+            nom = str(i + 1) + " - " + LEVELS[i]["name"]
+            self.dessiner_bouton(rectangle, nom, rectangle.collidepoint(souris))
+
+    def dessiner_bouton(self, rectangle, texte, survole=False):
+        couleur = (150, 100, 52)
+        if survole:
+            couleur = (185, 128, 70)
+        pygame.draw.rect(self.ecran, couleur, rectangle, 0, 8)
         pygame.draw.rect(self.ecran, (230, 200, 130), rectangle, 3, 8)
         image = self.ecrire(texte, 16, (255, 245, 215))
         self.ecran.blit(image, (rectangle.x + (rectangle.width - image.get_width()) // 2, rectangle.y + (rectangle.height - image.get_height()) // 2))
@@ -529,17 +595,30 @@ class Game:
         pygame.draw.rect(self.ecran, (70, 45, 25), (0, haut, largeur, HAUTEUR_BARRE))
         pygame.draw.line(self.ecran, (230, 200, 130), (0, haut), (largeur, haut), 3)
 
+        if self.phase == "menu":
+            self.ecran.blit(self.ecrire("Menu", 18, (255, 245, 215)), (14, haut + 6))
+            aide = "Clic sur un niveau ou touche 1 a " + str(len(LEVELS)) + "   Echap : quitter"
+            self.ecran.blit(self.ecrire(aide, 14, (220, 200, 170)), (14, haut + 92))
+            return
+
         titre = "Niveau " + str(self.numero + 1) + "  -  Coups : " + str(self.coups)
         self.ecran.blit(self.ecrire(titre, 18, (255, 245, 215)), (14, haut + 6))
         self.ecran.blit(self.ecrire(self.resultat, 18, (255, 225, 120)), (14, haut + 28))
-        aide = "Fleches : bouger   R : recommencer   B : resoudre   Echap : quitter"
+        aide = "Fleches : bouger  R : recommencer  B : resoudre  M : menu  Echap : quitter"
         self.ecran.blit(self.ecrire(aide, 14, (220, 200, 170)), (14, haut + 92))
 
         self.dessiner_bouton(self.bouton_resoudre, "Resoudre (BFS)")
         self.dessiner_bouton(self.bouton_recommencer, "Recommencer")
+        self.dessiner_bouton(self.bouton_menu, "Menu")
 
     def draw(self):
         ecoule = pygame.time.get_ticks() - self.debut_phase
+        if self.phase == "menu":
+            self.dessiner_menu()
+            self.dessiner_barre()
+            pygame.display.flip()
+            return
+
         if self.phase != "glisse":
             self.dessiner_niveau()
 

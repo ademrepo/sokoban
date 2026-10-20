@@ -1,6 +1,6 @@
 # Point d'entree du programme.
-# Usage : python main.py           -> lance l'interface graphique (Pygame)
-#         python main.py --niveau N -> affiche le niveau numero N (1 a 8)
+# Usage : python main.py           -> lance l'interface graphique (Pygame), en commencant par le menu
+#         python main.py --niveau N -> ouvre directement le niveau numero N (1 a 8)
 #         python main.py --console -> mode console : BFS sur tous les niveaux
 
 import sys
@@ -41,11 +41,14 @@ def main():
     if "--console" in sys.argv:
         mode_console()
     else:
-        # Option : python main.py --niveau 3 affiche le niveau numero 3 (1 = Exemple 1).
+        # Sans option, le jeu commence par le menu de choix du niveau.
+        # Option : python main.py --niveau 3 ouvre directement le niveau numero 3 (1 = Exemple 1).
         numero = 0
+        menu = True
         if "--niveau" in sys.argv:
             numero = int(sys.argv[sys.argv.index("--niveau") + 1]) - 1
-        jeu = Game(numero)
+            menu = False
+        jeu = Game(numero, menu)
         jeu.run()
 
 
