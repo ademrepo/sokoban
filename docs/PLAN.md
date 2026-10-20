@@ -52,4 +52,4 @@ Correspondance avec les anciens numéros (avant la renumérotation du 2026-10-20
 Hors plan : commit `c3de3e1` (décor identique dans tous les niveaux, « Niveau N », fenêtre plus petite) = début de l'étape 12, documenté après coup dans docs/logs/2026-10-20_session-15.md.
 
 ## Prochaine étape
-Étapes 0 à 26 faites. La partie UI/UX (17 à 22), la correction `steps` (23) et les relectures (24 à 26) sont sur la branche `adem` : à essayer (`python main.py`), puis à fusionner dans `main`. Ensuite, relire `docs/EXPLICATIONS.md` pour la soutenance. Test : `python main.py`, voir `docs/COMMANDES.md` et `docs/SPEC.md`.
+Étapes 0 à 26 faites. La branche `adem` (UI/UX, steps du BFS, relectures) est fusionnée dans `main` le 2026-10-20 (commit de fusion « Fusion de la branche adem : UI/UX... »). Ensuite, relire `docs/EXPLICATIONS.md` pour la soutenance. Test : `python main.py`, voir `docs/COMMANDES.md` et `docs/SPEC.md`.
