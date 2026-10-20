@@ -121,42 +121,15 @@ def load_sprites(taille):
     for k in range(len(touffes)):
         x, y, largeur, hauteur = touffes[k]
         sprites["touffe" + str(k)] = decouper_hauteur(plantes_sans_ombre, x, y, largeur, hauteur, hauteur * 2)
-    sprites["vase"] = decouper_hauteur(props_ombres, 160, 210, 36, 46, taille)
-    sprites["statue"] = decouper_hauteur(props_ombres, 440, 14, 52, 84, taille * 2)
-    sprites["lanterne"] = decouper_hauteur(props_ombres, 446, 110, 36, 50, taille * 6 // 5)
+    # Decor garde : totem, tonneau, tombe, caisses de decor, et la porte de sortie.
+    # (rectangles lus avec voir_assets.py, hauteur voulue ensuite ; les proportions sont gardees)
     sprites["totem"] = decouper_hauteur(props_ombres, 348, 170, 44, 90, taille * 2)
-    sprites["coffre"] = decouper_hauteur(props_ombres, 94, 26, 40, 40, taille)
     sprites["tonneau"] = decouper_hauteur(props_ombres, 160, 150, 36, 42, taille)
-    sprites["panneau"] = decouper_hauteur(props_ombres, 94, 156, 36, 42, taille)
     sprites["tombe"] = decouper_hauteur(props_ombres, 222, 236, 40, 48, taille)
-    sprites["banc"] = decouper_hauteur(props_ombres, 288, 16, 66, 46, taille)
-    # Variantes (memes familles d'objets, autres formes), rectangles lus avec voir_assets.py.
-    sprites["banc2"] = decouper_hauteur(props_ombres, 286, 85, 74, 44, taille)
-    sprites["vase2"] = decouper_hauteur(props_ombres, 162, 286, 35, 35, taille)
-    sprites["vase3"] = decouper_hauteur(props_ombres, 163, 346, 31, 40, taille)
-    sprites["tombe2"] = decouper_hauteur(props_ombres, 287, 249, 38, 35, taille)
-    sprites["stele"] = decouper_hauteur(props_ombres, 225, 7, 34, 58, taille * 3 // 2)
-    sprites["totem2"] = decouper_hauteur(props_ombres, 414, 192, 40, 61, taille * 3 // 2)
-    sprites["rocher"] = decouper_hauteur(props_ombres, 1, 428, 66, 50, taille)
-    # Autres variantes du pack : (nom, rectangle, hauteur voulue).
-    autres = [
-        ("coffre2", (94, 74, 38, 54), taille),
-        ("panneau2", (94, 222, 34, 36), taille),
-        ("stele2", (225, 89, 34, 70), taille * 3 // 2),
-        ("stele3", (225, 181, 34, 42), taille),
-        ("tombe3", (225, 301, 34, 44), taille),
-        ("tombe4", (286, 304, 38, 50), taille),
-        ("sarcophage", (286, 156, 38, 61), taille * 3 // 2),
-        ("dalle_haute", (385, 0, 34, 65), taille * 3 // 2),
-        ("dalle_haute2", (385, 96, 34, 65), taille * 3 // 2),
-        ("ruine", (418, 357, 61, 53), taille),
-        ("caisses", (158, 16, 40, 54), taille * 3 // 2),
-        ("caisse_petite", (161, 84, 32, 44), taille),
-        ("porte", (27, 101, 42, 54), taille * 5 // 4),   # sert de sortie du niveau (voir gui.py)
-        ("porte_ouverte", (27, 164, 42, 58), taille * 5 // 4),
-    ]
-    for nom, rect, hauteur_voulue in autres:
-        sprites[nom] = decouper_hauteur(props_ombres, rect[0], rect[1], rect[2], rect[3], hauteur_voulue)
+    sprites["caisses"] = decouper_hauteur(props_ombres, 158, 16, 40, 54, taille * 3 // 2)
+    sprites["caisse_petite"] = decouper_hauteur(props_ombres, 161, 84, 32, 44, taille)
+    sprites["porte"] = decouper_hauteur(props_ombres, 27, 101, 42, 54, taille * 5 // 4)   # sortie du niveau
+    sprites["porte_ouverte"] = decouper_hauteur(props_ombres, 27, 164, 42, 58, taille * 5 // 4)
 
     # Arche en pierre (feuille des structures) : elle encadre seulement la porte de sortie.
     structures = charger_feuille("TX Struct.png")

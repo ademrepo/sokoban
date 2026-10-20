@@ -17,9 +17,9 @@ from sokoban import SokobanPuzzle
 from search import BFS
 from assets_loader import load_sprites
 
-TAILLE = 48            # taille d'une case en pixels
+TAILLE = 44            # taille d'une case en pixels
 MARGE = 2              # marge autour du plus grand niveau, en nombre de cases (sert de decor)
-HAUTEUR_BARRE = 132    # hauteur de la barre d'infos en bas de la fenetre, en pixels
+HAUTEUR_BARRE = 112    # hauteur de la barre d'infos en bas de la fenetre, en pixels
 # Couleurs de la cible : plaque de pierre avec un contour dore (plus brillant quand une caisse est dessus).
 COULEUR_PLAQUE = (120, 115, 105)
 COULEUR_RUNE = (205, 150, 50)
@@ -70,8 +70,8 @@ class Game:
         self.polices = {}     # polices deja creees, rangees par taille (voir ecrire)
 
         # Les deux boutons de la barre d'infos (rectangles cliquables).
-        self.bouton_resoudre = pygame.Rect(14, hauteur + 66, 230, 38)
-        self.bouton_recommencer = pygame.Rect(260, hauteur + 66, 230, 38)
+        self.bouton_resoudre = pygame.Rect(14, hauteur + 52, 230, 34)
+        self.bouton_recommencer = pygame.Rect(260, hauteur + 52, 230, 34)
 
         # Le niveau est dessine sur "monde", puis recopie sur l'ecran (pratique pour faire glisser).
         self.monde = pygame.Surface((largeur, hauteur))
@@ -96,7 +96,7 @@ class Game:
         self.chemin_chat = []      # cases que le chat traverse pour aller a la porte
         self.coups = 0          # nombre de deplacements faits a la main
         self.annuler_solution()
-        pygame.display.set_caption("Sokoban - " + self.niveau["name"])
+        pygame.display.set_caption("Sokoban - Niveau " + str(numero + 1))
 
     def annuler_solution(self):
         # Efface la solution du BFS et arrete la lecture automatique.
@@ -301,29 +301,54 @@ class Game:
                     variante = ["buisson", "buisson2"][(r + c) % 2]
                     self.monde.blit(self.sprites[variante], (c * TAILLE, r * TAILLE))
 
+    def mur_visible(self, r, c):
+        # Vrai si (r, c) est un mur du niveau qu'on voit a l'ecran (dans la grille, et qui touche du sol).
+        grille = self.etat.grid
+        if r < 0 or r >= len(grille) or c < 0 or c >= len(grille[r]):
+            return False
+        return grille[r][c] == "O" and self.touche_le_sol(r, c)
+
+    def poser(self, nom, wr, wc):
+        # Pose un objet du decor dans la case (wr, wc) de la zone de jeu, les pieds en bas de la case.
+        # On ne pose rien si la case est occupee (ou, pour un objet haut, si la case au-dessus l'est).
+        image = self.sprites[nom]
+        if not self.case_libre(wr, wc):
+            return
+        if image.get_height() > TAILLE and not self.case_libre(wr - 1, wc):
+            return
+        x = wc * TAILLE + (TAILLE - image.get_width()) // 2
+        y = (wr + 1) * TAILLE - image.get_height()
+        self.monde.blit(image, (x, y))
+
     def dessiner_decor(self):
-        # Decor pose sur les cases d'herbe libres, partout autour et dans les creux du niveau.
-        # Le choix de l'objet depend seulement de la position (pas de hasard : le rendu est toujours le meme).
-        # Les objets hauts (statue, totem...) ont leur pied dans la case et montent vers le haut :
-        # on verifie que la case au-dessus est libre aussi.
-        s = self.sprites
-        objets = ["statue", "lanterne", "vase", "buisson", "tonneau", "coffre", "totem", "panneau", "tombe", "banc",
-                  "buisson2", "vase2", "stele", "banc2", "tombe2", "totem2", "rocher", "vase3", "coffre2", "panneau2",
-                  "stele2", "stele3", "tombe3", "tombe4", "sarcophage", "dalle_haute", "dalle_haute2", "ruine",
-                  "caisses", "caisse_petite"]
+        # Decor identique dans tous les niveaux : quelques caisses, 3 tombes alignees,
+        # 3 tonneaux groupes dans un coin et 2 totems contre le mur, de chaque cote de la porte.
+
+        # Caisses de decor : positions donnees par une formule (pas de hasard, le rendu est toujours le meme).
         for wr in range(1, self.cases_hauteur - 1):
             for wc in range(1, self.cases_largeur - 1):
-                if not self.case_libre(wr, wc):
-                    continue
-                if (wr * 13 + wc * 7) % 3 != 0:
-                    continue
-                nom = objets[(wr * 5 + wc * 9) % len(objets)]
-                image = s[nom]
-                if image.get_height() > TAILLE and not self.case_libre(wr - 1, wc):
-                    continue
-                x = wc * TAILLE + (TAILLE - image.get_width()) // 2
-                y = (wr + 1) * TAILLE - image.get_height()
-                self.monde.blit(image, (x, y))
+                if (wr * 13 + wc * 7) % 3 == 0:
+                    numero = (wr * 5 + wc * 9) % 30
+                    if numero == 28:
+                        self.poser("caisses", wr, wc)
+                    if numero == 29:
+                        self.poser("caisse_petite", wr, wc)
+
+        # Trois tombes alignees en bas a gauche.
+        bas = self.cases_hauteur - 2
+        for k in range(3):
+            self.poser("tombe", bas, 2 + k)
+
+        # Trois tonneaux groupes dans le coin en bas a droite.
+        self.poser("tonneau", bas, self.cases_largeur - 3)
+        self.poser("tonneau", bas, self.cases_largeur - 4)
+        self.poser("tonneau", bas - 1, self.cases_largeur - 3)
+
+        # Deux totems poses sur le mur du haut, de chaque cote de la porte (jamais dans le vide).
+        if self.porte is not None:
+            for ecart in (-3, 3):
+                if self.mur_visible(self.porte[0], self.porte[1] + ecart):
+                    self.poser("totem", self.porte[0] + self.decalage_ligne - 1, self.porte[1] + self.decalage_colonne + ecart)
 
     def position_porte(self):
         # Coin haut gauche du dessin de la porte (posee sur le bas de sa case de mur) et son sprite.
@@ -504,11 +529,11 @@ class Game:
         pygame.draw.rect(self.ecran, (70, 45, 25), (0, haut, largeur, HAUTEUR_BARRE))
         pygame.draw.line(self.ecran, (230, 200, 130), (0, haut), (largeur, haut), 3)
 
-        titre = self.niveau["name"] + "  -  Coups : " + str(self.coups)
-        self.ecran.blit(self.ecrire(titre, 18, (255, 245, 215)), (14, haut + 8))
-        self.ecran.blit(self.ecrire(self.resultat, 18, (255, 225, 120)), (14, haut + 36))
+        titre = "Niveau " + str(self.numero + 1) + "  -  Coups : " + str(self.coups)
+        self.ecran.blit(self.ecrire(titre, 18, (255, 245, 215)), (14, haut + 6))
+        self.ecran.blit(self.ecrire(self.resultat, 18, (255, 225, 120)), (14, haut + 28))
         aide = "Fleches : bouger   R : recommencer   B : resoudre   Echap : quitter"
-        self.ecran.blit(self.ecrire(aide, 14, (220, 200, 170)), (14, haut + 110))
+        self.ecran.blit(self.ecrire(aide, 14, (220, 200, 170)), (14, haut + 92))
 
         self.dessiner_bouton(self.bouton_resoudre, "Resoudre (BFS)")
         self.dessiner_bouton(self.bouton_recommencer, "Recommencer")
