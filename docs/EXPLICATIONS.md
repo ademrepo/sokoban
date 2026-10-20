@@ -110,21 +110,26 @@ L'interface utilise les deux : `getSolution()` pour rejouer les coups, `getPath(
 | Pseudo-code du cours | Code |
 |---|---|
 | `init_node <- Node(s, None, None)` | `racine = Node(s, None, None)` |
-| `if isGoal(init_node.state) return init_node` | idem |
+| `if isGoal(init_node.state) return init_node` | `return racine, 0` |
 | `Open: queue (FIFO)` | `ouvert = deque()` |
 | `Closed: list` | `ferme = []` |
+| `while (not Open.empty())` | `while len(ouvert) > 0:` puis `steps = steps + 1` |
 | `current <- Open.dequeue()` | `courant = ouvert.popleft()` (le moins profond) |
 | `Closed.add(current)` | `ferme.append(courant)` |
 | `for each (action, successor) in successorsFn(...)` | idem |
 | `child <- Node(successor, current, action)` | `enfant = Node(successeur, courant, action)` |
 | `if child.state not in Closed and not in Open` | test sur `fermeSet` / `ouvertSet` |
-| `if isGoal(child.state) return child` | idem (test au moment de la génération) |
+| `if isGoal(child.state) return child` | `return enfant, steps` (test au moment de la génération) |
 | `Open.enqueue(child)` | `ouvert.append(enfant)` |
-| `return None` | idem |
+| `return None` | `return None, steps` |
 
-**Seule différence : deux ensembles en plus (`ouvertSet`, `fermeSet`).** Chercher un état dans une liste prend un temps proportionnel à sa longueur ; dans un `set`, c'est presque immédiat. Ces ensembles contiennent exactement les mêmes états que `ouvert` et `ferme` et sont mis à jour en même temps. L'algorithme ne change pas, il va juste beaucoup plus vite. Sans eux, l'Exemple 5 prendrait des minutes.
+**`steps`, demandé en cours :** le BFS renvoie deux valeurs, le nœud but (ou `None`) **et** `steps`. C'est un compteur qui augmente à chaque tour de la boucle sur Open, donc le nombre de nœuds **développés**. Il mesure le travail fait par la recherche (sa complexité en temps). Il vaut 0 si l'état initial est déjà un but. À ne pas confondre avec le **coût** `g`, qui est la longueur de la solution trouvée.
 
-Appel : `BFS(etat, lambda s: s.successorFunction(), lambda s: s.isGoal())`. On passe les fonctions en paramètre, comme dans la signature du cours.
+**Différence avec le pseudo-code : deux ensembles en plus (`ouvertSet`, `fermeSet`).** Chercher un état dans une liste prend un temps proportionnel à sa longueur ; dans un `set`, c'est presque immédiat. Ces ensembles contiennent exactement les mêmes états que `ouvert` et `ferme` et sont mis à jour en même temps. L'algorithme ne change pas, il va juste beaucoup plus vite. Sans eux, l'Exemple 5 prendrait des minutes.
+
+Appel : `noeud, steps = BFS(etat, lambda s: s.successorFunction(), lambda s: s.isGoal())`. On passe les fonctions en paramètre, comme dans la signature du cours.
+
+**On manipule des nœuds, pas directement des états :** Open et Closed contiennent des `Node`. Grâce au lien `parent` de chaque nœud, on reconstruit la solution (`getSolution`) une fois le but trouvé. En revanche, pour savoir si un état a « déjà été vu », on compare les **états par leur contenu** (`__eq__` et `__hash__` comparent les grilles), pas les objets Python. Deux plateaux identiques créés séparément sont deux objets différents, mais c'est le même état.
 
 ### Propriétés (données par le cours)
 - **Complet** : si une solution existe, BFS la trouve (le but le moins profond est à une profondeur finie d).
@@ -133,20 +138,20 @@ Appel : `BFS(etat, lambda s: s.successorFunction(), lambda s: s.isGoal())`. On p
 
 ### Résultats (`python main.py --console`)
 
-| Niveau | Coût = nombre de pas | Temps BFS |
-|---|---|---|
-| Exemple 1 | 4 | 0,004 s |
-| Exemple 2 | 35 | 0,30 s |
-| Exemple 3 | 36 | 0,69 s |
-| Exemple 4 | 30 | 0,75 s |
-| Exemple 5 | 28 | 1,32 s |
-| Maison 1 | 2 | 0,000 s |
-| Maison 2 | 5 | 0,001 s |
-| Maison 3 | 10 | 0,05 s |
+| Niveau | Coût (longueur de la solution) | Steps (nœuds développés) | Temps BFS |
+|---|---|---|---|
+| Exemple 1 | 4 | 11 | 0,000 s |
+| Exemple 2 | 35 | 1 806 | 0,06 s |
+| Exemple 3 | 36 | 6 013 | 0,13 s |
+| Exemple 4 | 30 | 6 051 | 0,14 s |
+| Exemple 5 | 28 | 11 659 | 0,24 s |
+| Maison 1 | 2 | 3 | 0,000 s |
+| Maison 2 | 5 | 12 | 0,000 s |
+| Maison 3 | 10 | 571 | 0,01 s |
 
-(Temps mesurés sur le PC de développement ; ils changent d'un ordinateur à l'autre. Les coûts, eux, sont toujours les mêmes. Ils ont été confirmés par un solveur indépendant, voir session 13.)
+(Temps mesurés sur le PC de développement ; ils changent d'un ordinateur à l'autre. Les coûts et les steps, eux, sont toujours les mêmes, et les tests les vérifient. Les coûts ont été confirmés par un solveur indépendant, voir session 13.)
 
-« Coût » et « Nombre de pas » sont égaux, car chaque pas coûte 1. On affiche les deux parce que l'énoncé demande les deux.
+Ce tableau montre bien la différence : une solution de 28 coups (Exemple 5) a demandé de développer 11 659 nœuds. Les steps grandissent beaucoup plus vite que le coût, c'est le O(b^d) du cours.
 
 ---
 
@@ -185,7 +190,7 @@ Le reste de `bouger` ne sert qu'à l'animation :
 ### 4.3 Bouton « Résoudre (BFS) » : la simulation de la solution
 1. On lance `BFS` depuis la position **actuelle** : on peut donc jouer quelques coups puis demander la solution.
 2. On mesure le temps avec `time.time()` avant et après.
-3. On affiche « BFS : coût X | Y pas | Z s ».
+3. On affiche « BFS : coût X | Y steps | Z s » : le coût de la solution, le nombre de nœuds développés et le temps.
 4. `getPath()` donne la trajectoire, dessinée en bleu sur le sol ; elle raccourcit à mesure que le chat avance.
 5. La lecture automatique rejoue `getSolution()` : un coup toutes les 260 ms, avec la même fonction `bouger`.
 
@@ -214,7 +219,7 @@ La touche S coupe le son. Si l'ordinateur n'a pas de son, le jeu marche quand m�
 - **règles** : un mur bloque ; pousser une caisse dans un mur, ou deux caisses, est interdit ; une caisse poussée sur une cible devient `*` ; une caisse poussée hors d'une cible redevient `B` ; marcher sur une cible puis la quitter ; un successeur ne modifie pas l'état parent ;
 - **niveaux** : bien formés (un seul joueur, autant de caisses que de cibles, bord en murs), pas déjà résolus au départ ;
 - **`isGoal`** et **`Node`** : la racine, une chaîne de trois noeuds ;
-- **BFS** : un état déjà but, une seule poussée, un niveau sans solution, la solution rejouée arrive au but, et tous les niveaux sont résolus avec leur **coût optimal** (4, 35, 36, 30, 28, 2, 5, 10).
+- **BFS** : un état déjà but (0 step), une seule poussée (1 step), un niveau sans solution (2 steps), la solution rejouée arrive au but, et tous les niveaux sont résolus avec leur **coût optimal** (4, 35, 36, 30, 28, 2, 5, 10) et leur nombre de **steps** attendu.
 
 ---
 
@@ -222,6 +227,15 @@ La touche S coupe le son. Si l'ordinateur n'a pas de son, le jeu marche quand m�
 
 **Pourquoi BFS trouve la solution la plus courte ?**
 Il explore niveau par niveau : tous les états à 1 coup, puis tous ceux à 2 coups, etc. Le premier but trouvé est donc à la profondeur minimale. Comme chaque coup coûte 1, c'est aussi le coût minimal.
+
+**C'est quoi la fonction successeur ?**
+La fonction qui répond à « depuis cet état, où peut-on aller ? ». Elle renvoie la liste des paires (action, état enfant), une par coup légal. Un enfant est une copie du père avec une seule modification (le déplacement), et le père n'est jamais modifié. C'est `successorFunction()`, le seul endroit où sont écrites les règles.
+
+**Pourquoi le BFS manipule des nœuds et pas directement des états ?**
+Un état ne sait pas d'où il vient. Un nœud garde son père et l'action qui y mène : une fois le but trouvé, on remonte les pères pour obtenir la solution. Mais pour le test « déjà vu ? », on compare les états par leur contenu (la grille), jamais les objets Python eux-mêmes.
+
+**Que représente `steps` ?**
+Le nombre de tours de la boucle sur Open, donc de nœuds développés : c'est le travail fait par la recherche. Le coût, lui, est la longueur de la solution. Exemple 5 : coût 28, mais 11 659 steps.
 
 **Pourquoi tester `isGoal` à la génération et pas à la sortie de la file ?**
 C'est ce que fait le pseudo-code du cours (Fig. 1.19). Avec des coûts tous égaux à 1, ça ne change pas l'optimalité, et ça évite de développer un niveau de plus.
@@ -239,7 +253,7 @@ Une liste n'est pas hashable, on ne pourrait pas la mettre dans un `set`. Un tup
 Il y a autant de caisses que de cibles. Plus de `B` veut dire que toutes les caisses sont sur une cible (`*`), dans n'importe quel ordre.
 
 **Qu'est-ce qui est lent et pourquoi ?**
-Le BFS sur les grands niveaux (Exemple 5 : environ 1,3 s), car le nombre d'états grandit très vite avec la profondeur (O(b^d)). Pendant ce calcul, la fenêtre attend : on n'utilise pas de thread, pour garder le code simple.
+Le BFS sur les grands niveaux (Exemple 5 : 11 659 nœuds développés, entre 0,2 et 1,3 s selon l'ordinateur), car le nombre d'états grandit très vite avec la profondeur (O(b^d)). Pendant ce calcul, la fenêtre attend : on n'utilise pas de thread, pour garder le code simple.
 
 **Pourquoi pas de détection de blocage (caisse coincée dans un coin) ?**
 L'énoncé ne le demande pas. Le BFS finit quand même : il explore ces états puis les abandonne quand ils n'ont plus de successeurs nouveaux.

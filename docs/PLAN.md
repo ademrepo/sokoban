@@ -29,6 +29,10 @@ Deuxième partie : UI/UX (demandée par ademrepo le 2026-10-20, sur la branche `
 - [x] Étape 21 — Interface : barre d'infos et menu redessinés (aperçu de chaque niveau, boutons qui réagissent à la souris) — 2026-10-20 — docs/logs/2026-10-20_session-28.md
 - [x] Étape 22 — Relecture du code et mise à jour de la doc (README, COMMANDES, EXPLICATIONS) — 2026-10-20 — docs/logs/2026-10-20_session-29.md
 
+Correction d'après les notes du cours (demandée par ademrepo le 2026-10-20) :
+
+- [x] Étape 23 — BFS : renvoyer aussi `steps` (nœuds développés), l'afficher dans l'interface et la console ; SPEC, tests et explications mis à jour — 2026-10-20 — docs/logs/2026-10-20_session-30.md
+
 Correspondance avec les anciens numéros (avant la renumérotation du 2026-10-20, commit `4dc4589`) :
 
 | Nouveau | Ancien | Contenu |
@@ -45,4 +49,4 @@ Correspondance avec les anciens numéros (avant la renumérotation du 2026-10-20
 Hors plan : commit `c3de3e1` (décor identique dans tous les niveaux, « Niveau N », fenêtre plus petite) = début de l'étape 12, documenté après coup dans docs/logs/2026-10-20_session-15.md.
 
 ## Prochaine étape
-Étapes 0 à 22 faites. La partie UI/UX (17 à 22) est sur la branche `adem` : à essayer (`python main.py`), puis à fusionner dans `main`. Ensuite, relire `docs/EXPLICATIONS.md` pour la soutenance. Test : `python main.py`, voir `docs/COMMANDES.md` et `docs/SPEC.md`.
+Étapes 0 à 23 faites. La partie UI/UX (17 à 22) et la correction `steps` (23) sont sur la branche `adem` : à essayer (`python main.py`), puis à fusionner dans `main`. Ensuite, relire `docs/EXPLICATIONS.md` pour la soutenance. Test : `python main.py`, voir `docs/COMMANDES.md` et `docs/SPEC.md`.

@@ -121,7 +121,14 @@ def test_node_chaine_de_trois_noeuds():
 
 
 def lancer_bfs(etat):
-    return BFS(etat, lambda st: st.successorFunction(), lambda st: st.isGoal())
+    # Retourne seulement le noeud but (ou None) ; les steps sont testes a part.
+    noeud, steps = BFS(etat, lambda st: st.successorFunction(), lambda st: st.isGoal())
+    return noeud
+
+
+def lancer_bfs_steps(etat):
+    noeud, steps = BFS(etat, lambda st: st.successorFunction(), lambda st: st.isGoal())
+    return steps
 
 
 def test_bfs_etat_initial_deja_but():
@@ -129,6 +136,7 @@ def test_bfs_etat_initial_deja_but():
     noeud = lancer_bfs(etat)
     assert noeud.g == 0
     assert noeud.getSolution() == []
+    assert lancer_bfs_steps(etat) == 0      # aucun noeud developpe
 
 
 def test_bfs_une_poussee():
@@ -137,12 +145,16 @@ def test_bfs_une_poussee():
     assert noeud.getSolution() == ["RIGHT"]
     assert noeud.g == 1
     assert noeud.state.isGoal()
+    assert lancer_bfs_steps(etat) == 1      # seule la racine est developpee : son enfant est le but
 
 
 def test_bfs_sans_solution():
     # Cible a gauche, caisse collee au mur de droite, joueur entre les deux :
     # le joueur ne peut pas passer derriere la caisse, donc aucune solution.
-    assert lancer_bfs(SokobanPuzzle(["OOOOO", "OSRBO", "OOOOO"])) is None
+    etat = SokobanPuzzle(["OOOOO", "OSRBO", "OOOOO"])
+    assert lancer_bfs(etat) is None
+    # Les deux seuls etats possibles (joueur a sa place, joueur sur la cible) ont ete developpes.
+    assert lancer_bfs_steps(etat) == 2
 
 
 def test_bfs_solution_rejouee_arrive_au_but():
@@ -165,13 +177,17 @@ def test_bfs_solution_rejouee_arrive_au_but():
 def test_bfs_resout_tous_les_niveaux():
     # Chaque niveau de levels.py a une solution, et la rejouer mene bien a un etat but.
     # On verifie aussi le cout : ce sont les couts minimaux, confirmes par un autre solveur (log session 13).
+    # Les steps (noeuds developpes) sont toujours les memes, car les successeurs sont toujours
+    # generes dans le meme ordre : si ces nombres changent, c'est que le BFS a ete modifie.
     couts_optimaux = [4, 35, 36, 30, 28, 2, 5, 10]
+    steps_attendus = [11, 1806, 6013, 6051, 11659, 3, 12, 571]
     for i in range(len(LEVELS)):
         niveau = LEVELS[i]
         etat = SokobanPuzzle(niveau["grid"])
-        noeud = lancer_bfs(etat)
+        noeud, steps = BFS(etat, lambda st: st.successorFunction(), lambda st: st.isGoal())
         assert noeud is not None, niveau["name"]
         assert noeud.g == couts_optimaux[i], niveau["name"]
+        assert steps == steps_attendus[i], niveau["name"]
         courant = etat
         for action in noeud.getSolution():
             for a, st in courant.successorFunction():

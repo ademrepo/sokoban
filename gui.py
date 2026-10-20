@@ -3,7 +3,7 @@
 # - rendu d'un niveau avec les sprites du pack, decor autour et effets (nuages, lucioles, etincelles) ;
 # - jeu manuel : le chat et les caisses glissent d'une case a l'autre, compteur de coups,
 #   annuler (Z), recommencer ;
-# - bouton "Resoudre (BFS)" : cout, nombre de pas et temps de calcul, puis trajectoire tracee
+# - bouton "Resoudre (BFS)" : cout, steps (noeuds developpes) et temps de calcul, puis trajectoire tracee
 #   et lecture automatique de la solution ;
 # - fin de niveau : la porte s'ouvre et s'illumine, le chat va devant la porte et remue la queue,
 #   une pancarte "Bravo" descend avec ses boutons (Rejouer, Niveau suivant, Menu) ;
@@ -409,16 +409,17 @@ class Game:
         # du chat (positions de chaque etat du chemin) et demarre la lecture automatique.
         self.annuler_solution()
         debut = time.time()
-        noeud = BFS(self.etat, lambda s: s.successorFunction(), lambda s: s.isGoal())
+        noeud, steps = BFS(self.etat, lambda s: s.successorFunction(), lambda s: s.isGoal())
         duree = time.time() - debut
+        # cout = longueur de la solution ; steps = noeuds developpes par le BFS (travail de la recherche).
         if noeud is None:
-            self.resultat = "BFS : aucune solution depuis cette position"
+            self.resultat = "BFS : aucune solution | " + str(steps) + " steps"
         else:
             self.solution = noeud.getSolution()
             self.trajectoire = [etat.player_pos for etat in noeud.getPath()]
             self.auto = True
             self.dernier_pas = pygame.time.get_ticks()
-            self.resultat = "BFS : cout " + str(noeud.g) + " | " + str(len(self.solution)) + " pas | " + "%.3f" % duree + " s"
+            self.resultat = "BFS : cout " + str(noeud.g) + " | " + str(steps) + " steps | " + "%.3f" % duree + " s"
 
     def changer_phase(self, phase):
         self.phase = phase

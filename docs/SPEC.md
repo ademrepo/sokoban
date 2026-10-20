@@ -83,7 +83,8 @@ Ce fichier est la source de vérité du projet. Copie **verbatim** des sections 
 
 ### Student's interpretation decisions (these override any ambiguity above)
 - Only **BFS** is implemented (the statement only requires it in part B).
-- "Number of steps" in the interface = **number of steps (moves) of the solution found** (equal to the cost g, since every step costs 1). Display both "Coût" and "Nombre de pas", plus the computation time.
+- "Number of steps taken by the search algorithm" in the interface = **`steps`, the number of nodes expanded by the BFS** (one per iteration of the loop on Open; 0 if the initial state is already a goal). It measures the work of the search (time complexity). Display "Coût" (cost g = length of the solution), "steps" and the computation time.
+  *(Modifié le 2026-10-20 avec l'accord d'ademrepo, d'après les notes du cours : la prof fait renvoyer au BFS le nœud but **et** `steps`. L'ancienne interprétation, « nombre de pas = longueur de la solution », affichait deux fois le même nombre que le coût. Voir docs/logs/2026-10-20_session-30.md.)*
 - Levels = the 5 test examples of Figure 4 + the boards of Figure 1 and Figure 2 if convenient + 2 or 3 extra small levels of your own.
 - Method names must be exactly the ones of the statement: `isGoal`, `successorFunction`, `getPath`, `getSolution`. `init()` of the statement is implemented as Python's `__init__` (say so in a French comment).
 
@@ -221,7 +222,7 @@ Node(state, parent=None, action=None)
 Keep it as simple as possible (loop with `while node is not None`).
 
 ### 3.6 BFS signature
-`BFS(s, successorsFn, isGoal)` — exactly the course signature and structure (Open = `collections.deque`, Closed = list). Return the goal node or `None`.
+`BFS(s, successorsFn, isGoal)` — exactly the course signature and structure (Open = `collections.deque`, Closed = list). Return **two values: `(goal node or None, steps)`**, where `steps` is incremented at each iteration of the loop on Open (as in the course notes; modifié le 2026-10-20, voir §1).
 Called as: `BFS(initialPuzzle, lambda st: st.successorFunction(), lambda st: st.isGoal())` — or with small named helper functions instead of lambdas if that reads more simply.
 Membership tests `child.state not in Closed and not in Open` are O(n) on lists/deques and will be slow on bigger levels. Keep the course structure (Open queue + Closed list) AND add two **sets of states** (`openSet`, `closedSet`) used only for the membership tests, with a French comment explaining that it is only a speed optimization and does not change the algorithm. Keep both sets in sync with the queue/list.
 

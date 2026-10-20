@@ -52,7 +52,7 @@ les flèches puis Entrée.
 |---|---|
 | Flèches | bouger le chat et pousser les caisses (garder appuyé pour avancer en continu) |
 | Z, Retour arrière ou « Annuler » | annuler le dernier coup |
-| B ou « Résoudre (BFS) » | résout depuis la position actuelle : affiche coût, nombre de pas et temps, trace la trajectoire, puis joue la solution |
+| B ou « Résoudre (BFS) » | résout depuis la position actuelle : affiche le coût de la solution, les steps (nœuds développés par le BFS) et le temps, trace la trajectoire, puis joue la solution |
 | R ou « Recommencer » | recommencer le niveau |
 | M ou « Menu » | retour au menu |
 | S | couper / remettre le son |
@@ -65,7 +65,7 @@ Autres façons de lancer :
 
 ```
 python main.py --niveau 3      # ouvre directement le niveau 3 (1 à 8), sans menu
-python main.py --console       # sans fenêtre : BFS sur les 8 niveaux (solution, coût, temps)
+python main.py --console       # sans fenêtre : BFS sur les 8 niveaux (solution, coût, steps, temps)
 ```
 
 Le jeu peut être lancé depuis n'importe quel dossier (`python chemin/vers/main.py`).
