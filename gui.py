@@ -5,7 +5,7 @@
 # - bouton "Resoudre (BFS)" : cout, nombre de pas et temps de calcul, puis trajectoire tracee
 #   et lecture automatique de la solution ;
 # - fin de niveau : la porte s'ouvre et s'illumine, le chat va devant la porte et remue la queue,
-#   une pancarte "Bravo" descend, puis l'ecran glisse vers le niveau suivant ;
+#   une pancarte "Bravo" descend avec ses boutons (Rejouer, Niveau suivant, Menu) ;
 # - sons crees par le code (ambiance de prairie, bruit de pas), touche S pour couper.
 
 import math
@@ -34,7 +34,7 @@ TOUCHES = {pygame.K_UP: "UP", pygame.K_DOWN: "DOWN", pygame.K_LEFT: "LEFT", pyga
 DUREE_OUVERTURE = 1200   # la porte s'ouvre, la lumiere apparait
 DELAI_CASE = 170         # le chat marche jusqu'a la porte : temps pour traverser une case
 DUREE_QUEUE = 1600       # le chat remue la queue devant la porte
-DUREE_BRAVO = 2000       # la pancarte "Bravo"
+DUREE_PANCARTE = 600     # la pancarte "Bravo" descend (ensuite elle attend un clic sur un bouton)
 DUREE_GLISSE = 900       # le glissement vers le niveau suivant
 
 # La porte est ouverte (et la lumiere allumee) pendant toutes ces phases.
@@ -91,6 +91,13 @@ class Game:
             x = largeur // 2 - 250 + colonne * 260
             y = 200 + ligne * 64
             self.boutons_niveaux.append(pygame.Rect(x, y, 240, 50))
+
+        # Pancarte "Bravo" (au milieu de la zone de jeu) et ses trois boutons, a leur place finale.
+        centre_x = largeur // 2
+        self.pancarte = pygame.Rect(centre_x - 230, hauteur // 2 - 100, 460, 190)
+        self.bouton_rejouer = pygame.Rect(centre_x - 215, hauteur // 2 + 25, 130, 42)
+        self.bouton_suivant = pygame.Rect(centre_x - 75, hauteur // 2 + 25, 170, 42)
+        self.bouton_menu_bravo = pygame.Rect(centre_x + 105, hauteur // 2 + 25, 110, 42)
 
         # Le niveau est dessine sur "monde", puis recopie sur l'ecran (pratique pour faire glisser).
         self.monde = pygame.Surface((largeur, hauteur))
@@ -176,6 +183,8 @@ class Game:
                     self.ouvrir_menu()
                 if evenement.key == pygame.K_s:
                     self.changer_son()
+                if evenement.key in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_n) and self.phase == "bravo":
+                    self.niveau_suivant()
                 if evenement.key == pygame.K_b and self.phase == "jeu":
                     self.resoudre()
                 if evenement.key in TOUCHES and self.phase == "jeu":
@@ -189,6 +198,27 @@ class Game:
                     self.resoudre()
                 if self.bouton_menu.collidepoint(evenement.pos):
                     self.ouvrir_menu()
+                if self.phase == "bravo":
+                    self.clic_pancarte(evenement.pos)
+
+    def clic_pancarte(self, position):
+        # Boutons de la pancarte "Bravo" (seulement une fois qu'elle est arrivee au milieu).
+        if pygame.time.get_ticks() - self.debut_phase < DUREE_PANCARTE:
+            return
+        if self.bouton_suivant.collidepoint(position):
+            self.niveau_suivant()
+        elif self.bouton_rejouer.collidepoint(position):
+            self.charger_niveau(self.numero)
+        elif self.bouton_menu_bravo.collidepoint(position):
+            self.ouvrir_menu()
+
+    def niveau_suivant(self):
+        # On garde une copie de l'image du niveau fini, on charge le suivant, et l'ecran glisse
+        # de l'un a l'autre. Apres le dernier niveau, on revient au premier.
+        self.ancien_monde = self.monde.copy()
+        self.charger_niveau((self.numero + 1) % len(LEVELS))
+        self.changer_phase("glisse")
+        self.dessiner_niveau()
 
     def evenement_menu(self, evenement):
         # Dans le menu : clic sur un niveau, ou touche 1 a 8 ; Echap quitte le jeu.
@@ -265,14 +295,7 @@ class Game:
                 self.changer_phase("queue")
         elif self.phase == "queue":
             if ecoule >= DUREE_QUEUE:
-                self.changer_phase("bravo")
-        elif self.phase == "bravo":
-            if ecoule >= DUREE_BRAVO:
-                # On garde une copie de l'image du niveau fini, puis on charge le suivant.
-                self.ancien_monde = self.monde.copy()
-                self.charger_niveau((self.numero + 1) % len(LEVELS))
-                self.changer_phase("glisse")
-                self.dessiner_niveau()
+                self.changer_phase("bravo")     # la pancarte attend que le joueur choisisse
         elif self.phase == "glisse":
             if ecoule >= DUREE_GLISSE:
                 self.phase = "jeu"
@@ -569,27 +592,37 @@ class Game:
         self.ecran.blit(lumiere, (0, 0))
 
     def dessiner_pancarte(self, ecoule):
-        # Pancarte en bois "Bravo" qui descend du haut de l'ecran jusqu'au milieu de la zone de jeu.
-        largeur = 380
-        hauteur = 130
-        progression = min(1.0, ecoule / 600.0)
+        # Pancarte en bois "Bravo" qui descend du haut de l'ecran jusqu'au milieu de la zone de jeu,
+        # avec le nombre de coups et trois boutons : Rejouer, Niveau suivant, Menu.
+        progression = min(1.0, ecoule / float(DUREE_PANCARTE))
         progression = 1 - (1 - progression) * (1 - progression)      # ralentit a l'arrivee
-        cible_y = self.monde.get_height() // 2 - hauteur // 2
-        x = self.monde.get_width() // 2 - largeur // 2
-        y = int(-hauteur - 40 + (cible_y + hauteur + 40) * progression)
+        decalage = int((self.pancarte.bottom + 40) * (progression - 1))   # negatif tant qu'elle descend
+        planche = self.pancarte.move(0, decalage)
+        x = planche.x
+        y = planche.y
+        largeur = planche.width
+        hauteur = planche.height
 
         # Deux poteaux, puis la planche avec son contour et ses veines.
-        pygame.draw.rect(self.ecran, (95, 60, 30), (x + 40, y + hauteur - 10, 24, 50))
-        pygame.draw.rect(self.ecran, (95, 60, 30), (x + largeur - 64, y + hauteur - 10, 24, 50))
-        pygame.draw.rect(self.ecran, (150, 100, 52), (x, y, largeur, hauteur), 0, 10)
-        pygame.draw.rect(self.ecran, (85, 52, 25), (x, y, largeur, hauteur), 5, 10)
+        pygame.draw.rect(self.ecran, (95, 60, 30), (x + 50, y + hauteur - 10, 24, 50))
+        pygame.draw.rect(self.ecran, (95, 60, 30), (x + largeur - 74, y + hauteur - 10, 24, 50))
+        pygame.draw.rect(self.ecran, (150, 100, 52), planche, 0, 10)
+        pygame.draw.rect(self.ecran, (85, 52, 25), planche, 5, 10)
         for k in range(1, 4):
             pygame.draw.line(self.ecran, (125, 80, 40), (x + 8, y + k * hauteur // 4), (x + largeur - 8, y + k * hauteur // 4), 2)
 
         titre = self.ecrire("BRAVO !", 56, (255, 240, 200))
-        texte = self.ecrire("Niveau suivant...", 24, (255, 240, 200))
-        self.ecran.blit(titre, (x + (largeur - titre.get_width()) // 2, y + 14))
-        self.ecran.blit(texte, (x + (largeur - texte.get_width()) // 2, y + 82))
+        texte = self.ecrire("Niveau " + str(self.numero + 1) + " reussi en " + str(self.coups) + " coups", 20, (255, 240, 200))
+        self.ecran.blit(titre, (x + (largeur - titre.get_width()) // 2, y + 12))
+        self.ecran.blit(texte, (x + (largeur - texte.get_width()) // 2, y + 80))
+
+        # Les boutons suivent la pancarte pendant qu'elle descend.
+        nom_suivant = "Niveau suivant"
+        if self.numero == len(LEVELS) - 1:
+            nom_suivant = "Niveau 1"
+        self.dessiner_bouton(self.bouton_rejouer.move(0, decalage), "Rejouer")
+        self.dessiner_bouton(self.bouton_suivant.move(0, decalage), nom_suivant)
+        self.dessiner_bouton(self.bouton_menu_bravo.move(0, decalage), "Menu")
 
     def dessiner_menu(self):
         # Menu : herbe et haie en fond, une grande planche en bois avec le titre et un bouton par niveau.
@@ -605,16 +638,14 @@ class Game:
         self.monde.blit(texte, (largeur // 2 - texte.get_width() // 2, 155))
         self.ecran.blit(self.monde, (0, 0))
 
-        # Le bouton sous la souris est un peu plus clair.
-        souris = pygame.mouse.get_pos()
         for i in range(len(LEVELS)):
-            rectangle = self.boutons_niveaux[i]
             nom = str(i + 1) + " - " + LEVELS[i]["name"]
-            self.dessiner_bouton(rectangle, nom, rectangle.collidepoint(souris))
+            self.dessiner_bouton(self.boutons_niveaux[i], nom)
 
-    def dessiner_bouton(self, rectangle, texte, survole=False):
+    def dessiner_bouton(self, rectangle, texte):
+        # Bouton en bois ; celui qui est sous la souris est un peu plus clair.
         couleur = (150, 100, 52)
-        if survole:
+        if rectangle.collidepoint(pygame.mouse.get_pos()):
             couleur = (185, 128, 70)
         pygame.draw.rect(self.ecran, couleur, rectangle, 0, 8)
         pygame.draw.rect(self.ecran, (230, 200, 130), rectangle, 3, 8)

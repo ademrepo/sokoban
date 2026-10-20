@@ -20,6 +20,15 @@ Une étape par tour de travail. Cocher, dater et indiquer le log au fur et à me
 - [x] Étape 15 — Nettoyage : enlever tout ce qui est inutile (sprites, fonctions, imports, constantes et commentaires obsolètes, `voir_assets.py`, README à jour), avant les explications — 2026-10-20 — docs/logs/2026-10-20_session-20.md
 - [x] Étape 16 — Explications (`docs/EXPLICATIONS.md`) — 2026-10-20 — docs/logs/2026-10-20_session-21.md
 
+Deuxième partie : UI/UX (demandée par ademrepo le 2026-10-20, sur la branche `adem`) :
+
+- [x] Étape 17 — Fin de niveau : plus de passage automatique ; pancarte « Bravo » avec boutons « Niveau suivant », « Rejouer », « Menu » — 2026-10-20 — docs/logs/2026-10-20_session-24.md
+- [ ] Étape 18 — Mouvement fluide : le chat et la caisse glissent d'une case à l'autre, le chat se tourne, touche maintenue = il continue, Z = annuler le dernier coup
+- [ ] Étape 19 — Décor : objets du pack (arbres, statue, banc, coffre, panneau, vases, rochers) et ombres au sol
+- [ ] Étape 20 — Rendu dynamique : nuages qui passent, lucioles, cibles qui pulsent, étincelles quand une caisse arrive sur une cible
+- [ ] Étape 21 — Interface : barre d'infos et menu redessinés (aperçu de chaque niveau, boutons qui réagissent à la souris)
+- [ ] Étape 22 — Relecture du code et mise à jour de la doc (README, COMMANDES, EXPLICATIONS)
+
 Correspondance avec les anciens numéros (avant la renumérotation du 2026-10-20, commit `4dc4589`) :
 
 | Nouveau | Ancien | Contenu |
