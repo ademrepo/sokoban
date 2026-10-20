@@ -140,6 +140,21 @@ def testBFSSolutionRejoueeArriveAuBut():
     assert len(noeud.getSolution()) == noeud.g
 
 
+def testBFSResoutTousLesNiveaux():
+    # Chaque niveau de levels.py a une solution, et la rejouer mene bien a un etat but.
+    for niveau in LEVELS:
+        etat = SokobanPuzzle(niveau["grid"])
+        noeud = lancerBFS(etat)
+        assert noeud is not None, niveau["name"]
+        courant = etat
+        for action in noeud.getSolution():
+            for a, st in courant.successorFunction():
+                if a == action:
+                    courant = st
+                    break
+        assert courant.isGoal(), niveau["name"]
+
+
 if __name__ == "__main__":
     testMurBloqueDeplacement()
     testPousserCaisseDansMurEstIllegale()
@@ -155,4 +170,5 @@ if __name__ == "__main__":
     testBFSUnePoussee()
     testBFSSansSolution()
     testBFSSolutionRejoueeArriveAuBut()
+    testBFSResoutTousLesNiveaux()
     print("Tous les tests sont passes.")

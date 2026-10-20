@@ -7,7 +7,7 @@ Une étape par tour de travail. Cocher, dater et indiquer le log au fur et à me
 - [x] Étape 2 — État (`sokoban.py`) + tests de base — 2026-10-20 — docs/logs/2026-10-20_session-03.md
 - [x] Étape 3 — Node (`node.py`) + tests — 2026-10-20 — docs/logs/2026-10-20_session-04.md
 - [x] Étape 4 — BFS (`search.py`) + tests — 2026-10-20 — docs/logs/2026-10-20_session-05.md
-- [ ] Étape 5 — Validation du cœur (BFS sur tous les niveaux, `main.py --console`)
+- [x] Étape 5 — Validation du cœur (BFS sur tous les niveaux, `main.py --console`) — 2026-10-20 — docs/logs/2026-10-20_session-06.md
 - [ ] Étape 6 — GUI : rendu statique
 - [ ] Étape 7 — GUI : jeu manuel
 - [ ] Étape 8 — GUI : résolution par BFS
@@ -16,6 +16,6 @@ Une étape par tour de travail. Cocher, dater et indiquer le log au fur et à me
 - [ ] Étape 11 — Explications (`docs/EXPLICATIONS.md`)
 
 ## Prochaine étape
-Étape 5 — validation du cœur : BFS sur tous les niveaux de `levels.py` via `main.py --console` (solution, coût, temps), résultats notés dans le log.
+Étape 6 — GUI : rendu statique (`assets_loader.py` pour charger/découper les sprites de `assets/`, `gui.py` pour afficher un niveau). Voir `docs/SPEC.md`.
 
 Remarque : `pygame-ce` est installé dans l'environnement (compatible Python 3.14, importé comme `pygame`), donc rien à installer avant l'étape 6.
