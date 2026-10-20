@@ -25,7 +25,7 @@ Deuxième partie : UI/UX (demandée par ademrepo le 2026-10-20, sur la branche `
 - [x] Étape 17 — Fin de niveau : plus de passage automatique ; pancarte « Bravo » avec boutons « Niveau suivant », « Rejouer », « Menu » — 2026-10-20 — docs/logs/2026-10-20_session-24.md
 - [x] Étape 18 — Mouvement fluide : le chat et la caisse glissent d'une case à l'autre, le chat se tourne, touche maintenue = il continue, Z = annuler le dernier coup — 2026-10-20 — docs/logs/2026-10-20_session-25.md
 - [x] Étape 19 — Décor : objets du pack (arbres, statue, banc, coffre, panneau, vases, rochers) et ombres au sol — 2026-10-20 — docs/logs/2026-10-20_session-26.md
-- [ ] Étape 20 — Rendu dynamique : nuages qui passent, lucioles, cibles qui pulsent, étincelles quand une caisse arrive sur une cible
+- [x] Étape 20 — Rendu dynamique : nuages qui passent, lucioles, cibles qui pulsent, étincelles quand une caisse arrive sur une cible — 2026-10-20 — docs/logs/2026-10-20_session-27.md
 - [ ] Étape 21 — Interface : barre d'infos et menu redessinés (aperçu de chaque niveau, boutons qui réagissent à la souris)
 - [ ] Étape 22 — Relecture du code et mise à jour de la doc (README, COMMANDES, EXPLICATIONS)
 

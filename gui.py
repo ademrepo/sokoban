@@ -9,6 +9,7 @@
 # - sons crees par le code (ambiance de prairie, bruit de pas), touche S pour couper.
 
 import math
+import random
 import time
 from collections import deque
 import pygame
@@ -48,6 +49,32 @@ PHASES_PORTE_OUVERTE = ("ouverture", "marche", "queue", "bravo")
 DELAI_PAS = 350
 COULEUR_TRAJET = (90, 210, 255)
 
+# Effets du decor vivant.
+NOMBRE_LUCIOLES = 18
+DUREE_PARTICULE = 700    # duree de vie d'une etincelle ou d'un nuage de poussiere, en millisecondes
+
+
+def creer_halo(rayon, couleur, opacite):
+    # Disque flou : opaque au centre (opacite entre 0 et 255), transparent au bord.
+    # On dessine des cercles de plus en plus petits et de plus en plus opaques les uns sur les autres.
+    image = pygame.Surface((rayon * 2, rayon * 2), pygame.SRCALPHA)
+    for k in range(rayon, 0, -1):
+        alpha = int(opacite * (1 - k / float(rayon)))
+        pygame.draw.circle(image, (couleur[0], couleur[1], couleur[2], alpha), (rayon, rayon), k)
+    return image
+
+
+def creer_vignette(largeur, hauteur):
+    # Bords de l'image un peu assombris (comme une photo) : on calcule une petite image de 40 x 40
+    # pixel par pixel, puis on l'agrandit en douceur a la taille de la zone de jeu.
+    petite = pygame.Surface((40, 40), pygame.SRCALPHA)
+    for x in range(40):
+        for y in range(40):
+            distance = math.hypot((x - 19.5) / 19.5, (y - 19.5) / 19.5)    # 0 au centre, 1 au bord
+            force = max(0.0, (distance - 0.65) / 0.75)
+            petite.set_at((x, y), (10, 15, 5, int(min(1.0, force) ** 2 * 150)))
+    return pygame.transform.smoothscale(petite, (largeur, hauteur))
+
 
 class Game:
 
@@ -78,6 +105,18 @@ class Game:
         # Ellipse noire transparente, agrandie ou reduite pour faire les ombres au sol (voir dessiner_ombre).
         self.image_ombre = pygame.Surface((60, 20), pygame.SRCALPHA)
         pygame.draw.ellipse(self.image_ombre, (0, 0, 0, 70), (0, 0, 60, 20))
+
+        # Effets du decor vivant (images preparees une seule fois).
+        self.vignette = creer_vignette(largeur, hauteur)
+        self.nuage = pygame.transform.smoothscale(creer_halo(100, (20, 30, 10), 85), (360, 200))
+        self.lueur = creer_halo(10, (255, 240, 140), 200)
+        self.halo_cible = creer_halo(TAILLE, (255, 220, 90), 150)
+        self.particules = []     # etincelles et poussiere : [x, y, vx, vy, naissance, couleur]
+        # Lucioles : position de depart, vitesse et decalage au hasard (graine fixe : toujours pareil).
+        hasard = random.Random(5)
+        self.lucioles = []
+        for k in range(NOMBRE_LUCIOLES):
+            self.lucioles.append((hasard.uniform(0, largeur), hasard.uniform(0, hauteur), hasard.uniform(0.6, 1.4), hasard.uniform(0, 6.28)))
         self.polices = {}     # polices deja creees, rangees par taille (voir ecrire)
 
         # Sons : dictionnaire vide si l'ordinateur n'a pas de carte son (le jeu marche quand meme).
@@ -133,6 +172,7 @@ class Game:
         self.chemin_chat = []      # cases que le chat traverse pour aller a la porte
         self.coups = 0          # nombre de deplacements faits (a la main ou par la lecture automatique)
         self.historique = []    # etats precedents, pour annuler un coup (touche Z)
+        self.particules = []
 
         # Animation du dernier deplacement : le chat glisse de anim_joueur[0] a anim_joueur[1],
         # et la caisse poussee (s'il y en a une) de anim_caisse[0] a anim_caisse[1].
@@ -288,13 +328,28 @@ class Game:
                 # Si une caisse etait sur la case d'arrivee, c'est qu'elle a ete poussee d'une case.
                 case = ancien.grid[arrivee[0]][arrivee[1]]
                 if case == "B" or case == "*":
-                    self.anim_caisse = (arrivee, (arrivee[0] + dr, arrivee[1] + dc))
+                    caisse = (arrivee[0] + dr, arrivee[1] + dc)
+                    self.anim_caisse = (arrivee, caisse)
+                    # Un peu de poussiere derriere la caisse poussee, et des etincelles si elle arrive sur une cible.
+                    self.ajouter_particules(arrivee, 5, (200, 190, 160), 40)
+                    if suivant.grid[caisse[0]][caisse[1]] == "*":
+                        self.ajouter_particules(caisse, 16, (255, 220, 90), 110)
                 if self.son_actif and "pas" in self.sons:
                     self.sons["pas"].play()
                 return
 
         # Coup refuse (mur, caisse bloquee...) : le chat ne bouge pas, il fait juste un petit "choc".
         self.anim_joueur = (ancien.player_pos, ancien.player_pos)
+
+    def ajouter_particules(self, case, nombre, couleur, vitesse):
+        # Petites particules qui partent du centre de la case dans toutes les directions
+        # (vitesse en pixels par seconde). Elles disparaissent apres DUREE_PARTICULE ms.
+        x, y = self.ecran_case(case[0], case[1])
+        maintenant = pygame.time.get_ticks()
+        for k in range(nombre):
+            angle = 2 * math.pi * k / nombre + random.uniform(-0.3, 0.3)
+            v = vitesse * random.uniform(0.5, 1.0)
+            self.particules.append([x + TAILLE // 2, y + TAILLE // 2, math.cos(angle) * v, math.sin(angle) * v, maintenant, couleur])
 
     def annuler_coup(self):
         # Revient a l'etat d'avant le dernier coup (touche Z).
@@ -447,13 +502,19 @@ class Game:
 
     def dessiner_cible(self, x, y, allumee):
         # La cible est une plaque de pierre carree avec un contour dore (dessinee avec pygame.draw,
-        # il n'y a pas de sprite pour ca dans le pack). Le contour brille quand une caisse est dessus.
+        # il n'y a pas de sprite pour ca dans le pack). Le contour "respire" doucement ;
+        # quand une caisse est dessus, il brille et un halo dore deborde autour de la caisse.
         plaque = pygame.Rect(x + 4, y + 4, TAILLE - 8, TAILLE - 8)
         pygame.draw.rect(self.monde, COULEUR_PLAQUE, plaque, 0, 6)
-        couleur = COULEUR_CONTOUR
         if allumee:
-            couleur = COULEUR_CONTOUR_ALLUME
-        pygame.draw.rect(self.monde, couleur, plaque, 4, 6)
+            self.monde.blit(self.halo_cible, (x + TAILLE // 2 - self.halo_cible.get_width() // 2, y + TAILLE // 2 - self.halo_cible.get_height() // 2))
+            pygame.draw.rect(self.monde, COULEUR_CONTOUR_ALLUME, plaque, 4, 6)
+        else:
+            p = (math.sin(pygame.time.get_ticks() / 400.0) + 1) / 2     # entre 0 et 1, va et vient
+            couleur = []
+            for k in range(3):
+                couleur.append(int(COULEUR_CONTOUR[k] + (COULEUR_CONTOUR_ALLUME[k] - COULEUR_CONTOUR[k]) * p * 0.6))
+            pygame.draw.rect(self.monde, couleur, plaque, 4, 6)
 
     def dessiner_haie(self):
         # Rangee de buissons sur tout le bord de la zone de jeu (il en manque un de temps en temps).
@@ -658,6 +719,42 @@ class Game:
         if self.phase == "marche" or self.phase == "queue":
             self.dessiner_chat_sortie()
 
+        self.dessiner_effets()
+
+    def dessiner_effets(self):
+        # Ce qui rend le decor vivant : etincelles et poussiere, ombres des nuages qui passent, lucioles.
+        maintenant = pygame.time.get_ticks()
+
+        # Particules : elles avancent, ralentissent et rapetissent jusqu'a disparaitre.
+        restantes = []
+        for particule in self.particules:
+            age = (maintenant - particule[4]) / float(DUREE_PARTICULE)
+            if age < 1:
+                restantes.append(particule)
+                distance = (1 - (1 - age) * (1 - age)) * DUREE_PARTICULE / 1000.0     # ralentit en fin de course
+                x = int(particule[0] + particule[2] * distance)
+                y = int(particule[1] + particule[3] * distance)
+                rayon = max(1, int(5 * (1 - age)))
+                pygame.draw.circle(self.monde, particule[5], (x, y), rayon)
+        self.particules = restantes
+
+        # Trois ombres de nuages qui traversent lentement la scene, de gauche a droite.
+        largeur = self.monde.get_width()
+        for k in range(3):
+            parcours = largeur + self.nuage.get_width()
+            x = (maintenant * (0.012 + 0.004 * k) + k * 330) % parcours - self.nuage.get_width()
+            y = (k * 210 + 60) % self.monde.get_height() - 80
+            self.monde.blit(self.nuage, (int(x), y))
+
+        # Lucioles : elles flottent autour de leur place et clignotent doucement.
+        for (x0, y0, vitesse, decalage) in self.lucioles:
+            t = maintenant / 1000.0 * vitesse + decalage
+            x = x0 + math.sin(t * 0.7) * 30
+            y = y0 + math.cos(t * 0.9) * 20
+            eclat = (math.sin(t * 2.5) + 1) / 2
+            self.lueur.set_alpha(int(60 + 195 * eclat))
+            self.monde.blit(self.lueur, (int(x) - 10, int(y) - 10))
+
     def ecran_case(self, r, c):
         # Coin haut gauche (en pixels) de la case (r, c) du niveau ; r et c peuvent etre a virgule.
         return int((c + self.decalage_colonne) * TAILLE), int((r + self.decalage_ligne) * TAILLE)
@@ -686,6 +783,12 @@ class Game:
                 y = y + int(self.anim_direction[0] * choc)
 
         image = self.sprites["joueur"]
+        if not self.en_mouvement():
+            # A l'arret, le chat respire (il monte et descend d'un pixel) et remue la queue de temps en temps.
+            maintenant = pygame.time.get_ticks()
+            y = y + int(round(math.sin(maintenant / 350.0)))
+            if maintenant % 4000 < 600:
+                image = self.sprites["joueur_queue" + str(1 + (maintenant // 150) % 2)]
         if self.regarde_gauche:
             image = pygame.transform.flip(image, True, False)
         # Ombre sous les pattes, un peu plus petite quand le chat est en l'air.
@@ -847,6 +950,7 @@ class Game:
             self.ecran.blit(self.monde, (self.monde.get_width() - decalage, 0))
         else:
             self.ecran.blit(self.monde, (0, 0))
+        self.ecran.blit(self.vignette, (0, 0))
 
         if self.phase in PHASES_PORTE_OUVERTE:
             # La lumiere reste allumee depuis le moment de la victoire.
