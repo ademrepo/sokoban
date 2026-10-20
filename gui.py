@@ -101,13 +101,13 @@ class Game:
 
         # La zone de jeu a toujours la meme taille : celle du plus grand niveau + la marge.
         # Les niveaux plus petits sont centres dedans.
-        self.colonnes_max = 0
-        self.lignes_max = 0
+        colonnes_max = 0
+        lignes_max = 0
         for niveau in LEVELS:
-            self.lignes_max = max(self.lignes_max, len(niveau["grid"]))
-            self.colonnes_max = max(self.colonnes_max, len(niveau["grid"][0]))
-        self.cases_largeur = self.colonnes_max + 2 * MARGE
-        self.cases_hauteur = self.lignes_max + 2 * MARGE
+            lignes_max = max(lignes_max, len(niveau["grid"]))
+            colonnes_max = max(colonnes_max, len(niveau["grid"][0]))
+        self.cases_largeur = colonnes_max + 2 * MARGE
+        self.cases_hauteur = lignes_max + 2 * MARGE
         largeur = self.cases_largeur * TAILLE
         hauteur = self.cases_hauteur * TAILLE
 
@@ -636,25 +636,28 @@ class Game:
                 if (wr * 13 + wc * 7) % 11 == 0:
                     self.poser(["caillou", "caillou2"][(wr + wc) % 2], wr, wc)
 
+    def sur_la_case(self, image, r, c):
+        # Coin haut gauche ou dessiner une image posee sur la case (r, c) du niveau :
+        # centree en largeur, le bas de l'image sur le bas de la case.
+        x, y = self.ecran_case(r, c)
+        return x + (TAILLE - image.get_width()) // 2, y + TAILLE - image.get_height()
+
     def position_porte(self):
-        # Coin haut gauche du dessin de la porte (posee sur le bas de sa case de mur) et son sprite.
+        # Sprite de la porte (fermee ou ouverte) et coin haut gauche ou la dessiner, sur sa case de mur.
         sprite = self.sprites["porte"]
         if self.phase in PHASES_PORTE_OUVERTE:
             sprite = self.sprites["porte_ouverte"]
-        x = (self.porte[1] + self.decalage_colonne) * TAILLE + (TAILLE - sprite.get_width()) // 2
-        y = (self.porte[0] + self.decalage_ligne + 1) * TAILLE - sprite.get_height()
+        x, y = self.sur_la_case(sprite, self.porte[0], self.porte[1])
         return sprite, x, y
 
     def dessiner_trajectoire(self):
         # Trace le chemin que le chat va suivre : une ligne bleue entre les centres des cases,
         # avec un point sur chaque case et un gros point a l'arrivee.
         # On ne dessine que ce qu'il reste a parcourir : le trait raccourcit pendant la lecture.
-        reste = self.trajectoire[self.pas_auto:]
         points = []
-        for (r, c) in reste:
-            x = (c + self.decalage_colonne) * TAILLE + TAILLE // 2
-            y = (r + self.decalage_ligne) * TAILLE + TAILLE // 2
-            points.append((x, y))
+        for (r, c) in self.trajectoire[self.pas_auto:]:
+            x, y = self.ecran_case(r, c)
+            points.append((x + TAILLE // 2, y + TAILLE // 2))
         if len(points) >= 2:
             pygame.draw.lines(self.monde, COULEUR_TRAJET, False, points, 5)
             for point in points:
@@ -715,7 +718,7 @@ class Game:
                 if case == "B" or case == "*":
                     x, y = self.ecran_case(r, c)
                     if self.anim_caisse is not None and self.anim_caisse[1] == (r, c):
-                        x, y = self.glisser(self.anim_caisse[0], self.anim_caisse[1])
+                        x, y = self.glisser(self.anim_caisse[0], self.anim_caisse[1], self.avancement())
                     self.dessiner_ombre(x + TAILLE // 2 + 3, y + TAILLE - 3, TAILLE - 4)
                     self.monde.blit(self.sprites["caisse"], (x, y))
                     if case == "*":
@@ -729,11 +732,9 @@ class Game:
         # Porte de sortie, dessinee par-dessus le mur choisi (fermee, puis ouverte avec de la lumiere derriere).
         if self.porte is not None:
             sprite, x, y = self.position_porte()
-            # L'arche en pierre est toujours autour de la porte (posee sur le bas de la case du mur).
+            # L'arche en pierre est toujours autour de la porte.
             arche = self.sprites["arche_porte"]
-            arche_x = (self.porte[1] + self.decalage_colonne) * TAILLE + (TAILLE - arche.get_width()) // 2
-            arche_y = (self.porte[0] + self.decalage_ligne + 1) * TAILLE - arche.get_height()
-            self.monde.blit(arche, (arche_x, arche_y))
+            self.monde.blit(arche, self.sur_la_case(arche, self.porte[0], self.porte[1]))
             if self.phase in PHASES_PORTE_OUVERTE:
                 pygame.draw.rect(self.monde, (255, 245, 190), (x + 4, y + 8, sprite.get_width() - 8, sprite.get_height() - 8))
             self.monde.blit(sprite, (x, y))
@@ -782,9 +783,8 @@ class Game:
         # Coin haut gauche (en pixels) de la case (r, c) du niveau ; r et c peuvent etre a virgule.
         return int((c + self.decalage_colonne) * TAILLE), int((r + self.decalage_ligne) * TAILLE)
 
-    def glisser(self, depart, arrivee):
-        # Position (en pixels) d'un objet qui glisse de la case depart a la case arrivee.
-        p = self.avancement()
+    def glisser(self, depart, arrivee, p):
+        # Position (en pixels) d'un objet entre deux cases : p = 0 sur depart, p = 1 sur arrivee.
         r = depart[0] + (arrivee[0] - depart[0]) * p
         c = depart[1] + (arrivee[1] - depart[1]) * p
         return self.ecran_case(r, c)
@@ -798,7 +798,7 @@ class Game:
         if self.anim_joueur is not None and self.anim_joueur[1] == (r, c) and self.en_mouvement():
             t = (pygame.time.get_ticks() - self.anim_debut) / float(DUREE_MOUVEMENT)
             if self.anim_joueur[0] != self.anim_joueur[1]:
-                x, y = self.glisser(self.anim_joueur[0], self.anim_joueur[1])
+                x, y = self.glisser(self.anim_joueur[0], self.anim_joueur[1], self.avancement())
                 saut = int(math.sin(math.pi * t) * 6)
             else:
                 choc = math.sin(math.pi * t) * 5
@@ -812,15 +812,20 @@ class Game:
             y = y + int(round(math.sin(maintenant / 350.0)))
             if maintenant % 4000 < 600:
                 image = self.sprites["joueur_queue" + str(1 + (maintenant // 150) % 2)]
+        self.poser_chat(image, x, y, saut)
+
+    def poser_chat(self, image, x, y, saut):
+        # Dessine le chat dans la case dont le coin haut gauche est (x, y), tourne du bon cote,
+        # avec son ombre sous les pattes (plus petite quand il est en l'air, saut = hauteur du saut).
         if self.regarde_gauche:
             image = pygame.transform.flip(image, True, False)
-        # Ombre sous les pattes, un peu plus petite quand le chat est en l'air.
         self.dessiner_ombre(x + TAILLE // 2, y + TAILLE - 4, TAILLE * 2 // 3 - saut * 2)
         # Le chat est plus haut qu'une case : on aligne ses pieds sur le bas de la case.
         self.monde.blit(image, (x + (TAILLE - image.get_width()) // 2, y + TAILLE - image.get_height() - saut))
 
     def dessiner_chat_sortie(self):
-        # Position du chat : il glisse d'une case a la suivante le long de self.chemin_chat.
+        # Le chat glisse d'une case a la suivante le long de self.chemin_chat, en faisant de petits sauts,
+        # puis il remue la queue devant la porte.
         ecoule = pygame.time.get_ticks() - self.debut_phase
         chemin = self.chemin_chat
         rang = ecoule / float(DELAI_CASE)
@@ -828,11 +833,8 @@ class Game:
             rang = len(chemin) - 1.0
         i = int(rang)
         suivante = min(i + 1, len(chemin) - 1)
-        reste = rang - i
-        ligne = chemin[i][0] + (chemin[suivante][0] - chemin[i][0]) * reste
-        colonne = chemin[i][1] + (chemin[suivante][1] - chemin[i][1]) * reste
+        x, y = self.glisser(chemin[i], chemin[suivante], rang - i)
 
-        # Image : la queue bouge de gauche a droite devant la porte, et le chat fait de petits sauts en marchant.
         image = self.sprites["joueur"]
         saut = 0
         if self.phase == "queue":
@@ -841,11 +843,7 @@ class Game:
             saut = int(abs(math.sin(ecoule / 90.0)) * 4)
             if chemin[suivante][1] != chemin[i][1]:
                 self.regarde_gauche = chemin[suivante][1] < chemin[i][1]
-        if self.regarde_gauche:
-            image = pygame.transform.flip(image, True, False)
-        x = (colonne + self.decalage_colonne) * TAILLE + (TAILLE - image.get_width()) // 2
-        y = (ligne + self.decalage_ligne) * TAILLE + TAILLE - image.get_height() - saut
-        self.monde.blit(image, (int(x), int(y)))
+        self.poser_chat(image, x, y, saut)
 
     def dessiner_lumiere(self, ecoule):
         # Lumiere doree qui sort de la porte ouverte : un faisceau vers le bas et un halo qui pulse.
@@ -887,12 +885,9 @@ class Game:
         pygame.draw.rect(self.ecran, (95, 60, 30), (x + largeur - 74, y + hauteur - 10, 24, 50))
         self.dessiner_planche(planche, 12)
 
-        texte_titre = "BRAVO !"
         texte = "Niveau " + str(self.numero + 1) + " reussi en " + str(self.coups) + " coups"
-        titre = self.ecrire(texte_titre, 56, (255, 235, 170))
-        ligne = self.ecrire(texte, 20, (255, 240, 200))
-        self.ecrire_ombre(texte_titre, 56, (255, 235, 170), x + (largeur - titre.get_width()) // 2, y + 12)
-        self.ecrire_ombre(texte, 20, (255, 240, 200), x + (largeur - ligne.get_width()) // 2, y + 80)
+        self.ecrire_ombre("BRAVO !", 56, (255, 235, 170), planche.centerx, y + 12, True)
+        self.ecrire_ombre(texte, 20, (255, 240, 200), planche.centerx, y + 80, True)
 
         # Les boutons suivent la pancarte pendant qu'elle descend.
         nom_suivant = "Niveau suivant"
@@ -902,10 +897,14 @@ class Game:
         self.dessiner_bouton(self.bouton_suivant.move(0, decalage), nom_suivant)
         self.dessiner_bouton(self.bouton_menu_bravo.move(0, decalage), "Menu")
 
-    def ecrire_ombre(self, texte, taille, couleur, x, y):
-        # Ecrit un texte avec une ombre noire decalee de 2 pixels (plus lisible sur le bois et l'herbe).
+    def ecrire_ombre(self, texte, taille, couleur, x, y, centre=False):
+        # Ecrit un texte avec une ombre sombre decalee de 2 pixels (plus lisible sur le bois et l'herbe).
+        # Si centre est vrai, x est le milieu du texte (et pas son bord gauche).
+        image = self.ecrire(texte, taille, couleur)
+        if centre:
+            x = x - image.get_width() // 2
         self.ecran.blit(self.ecrire(texte, taille, (40, 25, 10)), (x + 2, y + 2))
-        self.ecran.blit(self.ecrire(texte, taille, couleur), (x, y))
+        self.ecran.blit(image, (x, y))
 
     def dessiner_planche(self, rectangle, arrondi):
         # Planche en bois : ombre portee, bois avec des veines, contour fonce et filet clair en haut.
@@ -940,24 +939,20 @@ class Game:
         largeur = self.monde.get_width()
         lignes = (len(LEVELS) + 1) // 2
         self.dessiner_planche(pygame.Rect(largeur // 2 - 290, 60, 580, 130 + 74 * lignes + 10), 14)
-        titre = self.ecrire("SOKOBAN", 64, (255, 235, 170))
-        self.ecrire_ombre("SOKOBAN", 64, (255, 235, 170), largeur // 2 - titre.get_width() // 2, 74)
-        sous_titre = self.ecrire("Choisis un niveau", 22, (255, 240, 200))
-        self.ecrire_ombre("Choisis un niveau", 22, (255, 240, 200), largeur // 2 - sous_titre.get_width() // 2, 146)
+        self.ecrire_ombre("SOKOBAN", 64, (255, 235, 170), largeur // 2, 74, True)
+        self.ecrire_ombre("Choisis un niveau", 22, (255, 240, 200), largeur // 2, 146, True)
 
         for i in range(len(LEVELS)):
             carte = self.boutons_niveaux[i]
-            choisie = i == self.choix_menu
-            if choisie:
-                carte = carte.move(0, -3)       # la carte choisie se souleve un peu
             fond = (120, 78, 38)
-            if choisie:
+            bord = (200, 160, 100)
+            if i == self.choix_menu:
+                # La carte choisie se souleve un peu, plus claire, avec un contour dore.
+                carte = carte.move(0, -3)
                 fond = (175, 120, 65)
+                bord = (255, 225, 120)
             pygame.draw.rect(self.ecran, (60, 38, 18), carte.move(0, 4), 0, 8)     # epaisseur sous la carte
             pygame.draw.rect(self.ecran, fond, carte, 0, 8)
-            bord = (200, 160, 100)
-            if choisie:
-                bord = (255, 225, 120)
             pygame.draw.rect(self.ecran, bord, carte, 3, 8)
 
             # Apercu du niveau a gauche de la carte, centre dans un carre de 50 x 50.
@@ -1024,16 +1019,14 @@ class Game:
             pygame.display.flip()
             return
 
-        if self.phase != "glisse":
-            self.dessiner_niveau()
-
         if self.phase == "glisse":
-            # L'ancien niveau sort a gauche pendant que le nouveau entre par la droite.
+            # L'ancien niveau sort a gauche pendant que le nouveau (deja dessine) entre par la droite.
             progression = min(1.0, ecoule / float(DUREE_GLISSE))
             decalage = int(progression * self.monde.get_width())
             self.ecran.blit(self.ancien_monde, (-decalage, 0))
             self.ecran.blit(self.monde, (self.monde.get_width() - decalage, 0))
         else:
+            self.dessiner_niveau()
             self.ecran.blit(self.monde, (0, 0))
         self.ecran.blit(self.vignette, (0, 0))
 

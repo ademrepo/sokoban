@@ -62,8 +62,8 @@ Pour chaque direction `(dr, dc)`, le joueur est en `(r, c)` :
 | Case n1 | Ce qui se passe |
 |---|---|
 | `O` (mur) | coup impossible |
-| `' '` ou `S` (libre) | le joueur avance (`deplacer_joueur`) |
-| `B` ou `*` (caisse) | si n2 est `' '` ou `S` : le joueur pousse la caisse (`pousser_caisse`) ; sinon (mur ou autre caisse) : impossible |
+| `' '` ou `S` (libre) | le joueur avance (`nouvelle_grille(..., pousse=False)`) |
+| `B` ou `*` (caisse) | si n2 est `' '` ou `S` : le joueur pousse la caisse (`nouvelle_grille(..., pousse=True)`) ; sinon (mur ou autre caisse) : impossible |
 
 Mise à jour des cases (on construit une **nouvelle** grille, on ne modifie jamais l'état actuel) :
 - case quittée : `R` → `' '` et `.` → `S` (on « découvre » la cible) ;
@@ -215,11 +215,11 @@ La touche S coupe le son. Si l'ordinateur n'a pas de son, le jeu marche quand m�
 ---
 
 ## 5. Les tests (`python test_core.py`)
-17 tests, avec de simples `assert` :
+16 tests, avec de simples `assert` :
 - **règles** : un mur bloque ; pousser une caisse dans un mur, ou deux caisses, est interdit ; une caisse poussée sur une cible devient `*` ; une caisse poussée hors d'une cible redevient `B` ; marcher sur une cible puis la quitter ; un successeur ne modifie pas l'état parent ;
 - **niveaux** : bien formés (un seul joueur, autant de caisses que de cibles, bord en murs), pas déjà résolus au départ ;
 - **`isGoal`** et **`Node`** : la racine, une chaîne de trois noeuds ;
-- **BFS** : un état déjà but (0 step), une seule poussée (1 step), un niveau sans solution (2 steps), la solution rejouée arrive au but, et tous les niveaux sont résolus avec leur **coût optimal** (4, 35, 36, 30, 28, 2, 5, 10) et leur nombre de **steps** attendu.
+- **BFS** : un état déjà but (0 step), une seule poussée (1 step), un niveau sans solution (2 steps), et tous les niveaux sont résolus avec leur **coût optimal** (4, 35, 36, 30, 28, 2, 5, 10) et leur nombre de **steps** attendu ; la solution de chaque niveau, rejouée avec `successorFunction`, arrive bien au but.
 
 ---
 

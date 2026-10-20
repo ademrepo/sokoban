@@ -10,7 +10,8 @@ from array import array
 import pygame
 
 # Chemin a partir du dossier de ce fichier : le jeu marche meme lance depuis un autre dossier.
-DOSSIER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "Pixel Art Top Down - Basic v1.2.3", "Texture") + os.sep
+DOSSIER_PROJET = os.path.dirname(os.path.abspath(__file__))
+DOSSIER = os.path.join(DOSSIER_PROJET, "assets", "Pixel Art Top Down - Basic v1.2.3", "Texture") + os.sep
 DOSSIER_OMBRES = DOSSIER + "Extra/"   # memes feuilles, mais avec les ombres au sol
 
 # Pour rendre l'herbe aussi vive que dans l'apercu du pack (on ajoute ces valeurs R, V, B a chaque pixel).
@@ -36,6 +37,11 @@ def decouper_hauteur(feuille, x, y, largeur, hauteur, hauteur_voulue):
     return pygame.transform.scale(morceau, (largeur_voulue, hauteur_voulue))
 
 
+def point(x, y, u):
+    # Les coordonnees du chat sont donnees pour une case de 48 pixels : u les met a la bonne taille.
+    return (int(x * u), int(y * u))
+
+
 def creer_joueur(taille, queue):
     # Petit chat orange dessine avec pygame.draw (le pack n'a qu'un bloc de pierre rectangulaire),
     # avec un chapeau vert pointu. queue = 0, 1 ou 2 : trois positions de la queue (pour la faire bouger).
@@ -45,12 +51,9 @@ def creer_joueur(taille, queue):
     clair = (250, 225, 190)
     contour = (95, 55, 25)
 
-    def p(x, y):
-        return (int(x * u), int(y * u))
-
     # Queue : chaque position est une petite ligne brisee.
     queues = [[(34, 52), (44, 47), (44, 38)], [(34, 52), (46, 51), (47, 43)], [(34, 52), (42, 45), (38, 37)]]
-    points = [p(x, y) for (x, y) in queues[queue]]
+    points = [point(x, y, u) for (x, y) in queues[queue]]
     pygame.draw.lines(image, contour, False, points, int(7 * u))
     pygame.draw.lines(image, orange, False, points, int(4 * u))
 
@@ -61,22 +64,22 @@ def creer_joueur(taille, queue):
 
     # Oreilles puis tete.
     for oreille in ([(9, 28), (10, 14), (21, 22)], [(39, 28), (38, 14), (27, 22)]):
-        points = [p(x, y) for (x, y) in oreille]
+        points = [point(x, y, u) for (x, y) in oreille]
         pygame.draw.polygon(image, orange, points)
         pygame.draw.polygon(image, contour, points, 2)
-    pygame.draw.circle(image, contour, p(24, 30), int(16 * u))
-    pygame.draw.circle(image, orange, p(24, 30), int(14 * u))
+    pygame.draw.circle(image, contour, point(24, 30, u), int(16 * u))
+    pygame.draw.circle(image, orange, point(24, 30, u), int(14 * u))
     pygame.draw.ellipse(image, clair, (int(16 * u), int(33 * u), int(16 * u), int(11 * u)))
 
     # Grands yeux verts, nez rose.
     for x in (17, 31):
-        pygame.draw.circle(image, (255, 255, 255), p(x, 31), int(4 * u))
-        pygame.draw.circle(image, (60, 160, 80), p(x, 31), int(3 * u))
-        pygame.draw.circle(image, (20, 20, 20), p(x, 31), int(1.5 * u) + 1)
-    pygame.draw.circle(image, (255, 130, 150), p(24, 37), int(2 * u) + 1)
+        pygame.draw.circle(image, (255, 255, 255), point(x, 31, u), int(4 * u))
+        pygame.draw.circle(image, (60, 160, 80), point(x, 31, u), int(3 * u))
+        pygame.draw.circle(image, (20, 20, 20), point(x, 31, u), int(1.5 * u) + 1)
+    pygame.draw.circle(image, (255, 130, 150), point(24, 37, u), int(2 * u) + 1)
 
     # Chapeau vert pointu avec un bandeau clair.
-    chapeau = [p(9, 26), p(39, 26), p(36, 13), p(33, 3), p(21, 9)]
+    chapeau = [point(9, 26, u), point(39, 26, u), point(36, 13, u), point(33, 3, u), point(21, 9, u)]
     pygame.draw.polygon(image, (50, 160, 60), chapeau)
     pygame.draw.polygon(image, (20, 85, 30), chapeau, 2)
     pygame.draw.rect(image, (235, 220, 120), (int(9 * u), int(23 * u), int(30 * u), int(5 * u)))
@@ -91,8 +94,8 @@ def load_sprites(taille):
     herbe = charger_feuille("TX Tileset Grass.png")
     sprites["herbe"] = decouper(herbe, 0, 0, 32, 32, taille)
     sprites["herbe_fleurs"] = decouper(herbe, 125, 35, 32, 32, taille)
-    sprites["herbe"].fill(ECLAIRCIR_HERBE, special_flags=pygame.BLEND_RGB_ADD)
-    sprites["herbe_fleurs"].fill(ECLAIRCIR_HERBE, special_flags=pygame.BLEND_RGB_ADD)
+    for nom in ("herbe", "herbe_fleurs"):
+        sprites[nom].fill(ECLAIRCIR_HERBE, special_flags=pygame.BLEND_RGB_ADD)
 
     # Sol de jeu : dalles de pierre claire (plain et avec un clou), l'herbe reste a l'exterieur.
     sol_pierre = charger_feuille("TX Tileset Stone Ground.png")
@@ -106,8 +109,8 @@ def load_sprites(taille):
     mur = charger_feuille("TX Tileset Wall.png")
     sprites["mur1"] = decouper(mur, 32, 288, 64, 64, taille)
     sprites["mur2"] = decouper(mur, 128, 288, 64, 64, taille)
-    sprites["mur1"].fill(ECLAIRCIR_MUR, special_flags=pygame.BLEND_RGB_ADD)
-    sprites["mur2"].fill(ECLAIRCIR_MUR, special_flags=pygame.BLEND_RGB_ADD)
+    for nom in ("mur1", "mur2"):
+        sprites[nom].fill(ECLAIRCIR_MUR, special_flags=pygame.BLEND_RGB_ADD)
 
     props = charger_feuille("TX Props.png")
     sprites["caisse"] = decouper(props, 160, 18, 32, 23, taille)

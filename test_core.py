@@ -121,61 +121,36 @@ def test_node_chaine_de_trois_noeuds():
 
 
 def lancer_bfs(etat):
-    # Retourne seulement le noeud but (ou None) ; les steps sont testes a part.
-    noeud, steps = BFS(etat, lambda st: st.successorFunction(), lambda st: st.isGoal())
-    return noeud
-
-
-def lancer_bfs_steps(etat):
-    noeud, steps = BFS(etat, lambda st: st.successorFunction(), lambda st: st.isGoal())
-    return steps
+    # Retourne (noeud but ou None, steps).
+    return BFS(etat, lambda st: st.successorFunction(), lambda st: st.isGoal())
 
 
 def test_bfs_etat_initial_deja_but():
-    etat = SokobanPuzzle(["OOOO", "OR *", "OOOO"])
-    noeud = lancer_bfs(etat)
+    noeud, steps = lancer_bfs(SokobanPuzzle(["OOOO", "OR *", "OOOO"]))
     assert noeud.g == 0
     assert noeud.getSolution() == []
-    assert lancer_bfs_steps(etat) == 0      # aucun noeud developpe
+    assert steps == 0      # aucun noeud developpe
 
 
 def test_bfs_une_poussee():
-    etat = SokobanPuzzle(["OOOOO", "ORBSO", "OOOOO"])
-    noeud = lancer_bfs(etat)
+    noeud, steps = lancer_bfs(SokobanPuzzle(["OOOOO", "ORBSO", "OOOOO"]))
     assert noeud.getSolution() == ["RIGHT"]
     assert noeud.g == 1
     assert noeud.state.isGoal()
-    assert lancer_bfs_steps(etat) == 1      # seule la racine est developpee : son enfant est le but
+    assert steps == 1      # seule la racine est developpee : son enfant est le but
 
 
 def test_bfs_sans_solution():
     # Cible a gauche, caisse collee au mur de droite, joueur entre les deux :
     # le joueur ne peut pas passer derriere la caisse, donc aucune solution.
-    etat = SokobanPuzzle(["OOOOO", "OSRBO", "OOOOO"])
-    assert lancer_bfs(etat) is None
+    noeud, steps = lancer_bfs(SokobanPuzzle(["OOOOO", "OSRBO", "OOOOO"]))
+    assert noeud is None
     # Les deux seuls etats possibles (joueur a sa place, joueur sur la cible) ont ete developpes.
-    assert lancer_bfs_steps(etat) == 2
-
-
-def test_bfs_solution_rejouee_arrive_au_but():
-    # On rejoue les actions de la solution avec successorFunction : on doit finir sur un but.
-    etat = SokobanPuzzle(LEVELS[0]["grid"])
-    noeud = lancer_bfs(etat)
-    assert noeud is not None
-    courant = etat
-    for action in noeud.getSolution():
-        suivant = None
-        for a, st in courant.successorFunction():
-            if a == action:
-                suivant = st
-        assert suivant is not None
-        courant = suivant
-    assert courant.isGoal()
-    assert len(noeud.getSolution()) == noeud.g
+    assert steps == 2
 
 
 def test_bfs_resout_tous_les_niveaux():
-    # Chaque niveau de levels.py a une solution, et la rejouer mene bien a un etat but.
+    # Chaque niveau de levels.py a une solution, et la rejouer (avec successorFunction) mene bien a un etat but.
     # On verifie aussi le cout : ce sont les couts minimaux, confirmes par un autre solveur (log session 13).
     # Les steps (noeuds developpes) sont toujours les memes, car les successeurs sont toujours
     # generes dans le meme ordre : si ces nombres changent, c'est que le BFS a ete modifie.
@@ -184,16 +159,19 @@ def test_bfs_resout_tous_les_niveaux():
     for i in range(len(LEVELS)):
         niveau = LEVELS[i]
         etat = SokobanPuzzle(niveau["grid"])
-        noeud, steps = BFS(etat, lambda st: st.successorFunction(), lambda st: st.isGoal())
+        noeud, steps = lancer_bfs(etat)
         assert noeud is not None, niveau["name"]
         assert noeud.g == couts_optimaux[i], niveau["name"]
         assert steps == steps_attendus[i], niveau["name"]
+        assert len(noeud.getSolution()) == noeud.g, niveau["name"]     # chaque action coute 1
         courant = etat
         for action in noeud.getSolution():
-            for a, st in courant.successorFunction():
+            joue = False
+            for a, suivant in courant.successorFunction():
                 if a == action:
-                    courant = st
-                    break
+                    courant = suivant
+                    joue = True
+            assert joue, niveau["name"]       # chaque action de la solution est un coup permis
         assert courant.isGoal(), niveau["name"]
 
 
@@ -213,6 +191,5 @@ if __name__ == "__main__":
     test_bfs_etat_initial_deja_but()
     test_bfs_une_poussee()
     test_bfs_sans_solution()
-    test_bfs_solution_rejouee_arrive_au_but()
     test_bfs_resout_tous_les_niveaux()
     print("Tous les tests sont passes.")
