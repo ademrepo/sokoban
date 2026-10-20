@@ -38,6 +38,7 @@ Remplacer 5 par le numéro du niveau :
 | B ou bouton « Résoudre (BFS) » | Lancer le BFS : trace la trajectoire et joue la solution tout seul |
 | Une flèche pendant la lecture | Arrête la lecture automatique |
 | M ou bouton « Menu » | Retour au menu de choix du niveau |
+| S | Couper / remettre le son (ambiance de prairie et bruit de pas) |
 | Dans le menu : clic ou touche 1 à 8 | Ouvre ce niveau |
 | Échap | Quitter |
 

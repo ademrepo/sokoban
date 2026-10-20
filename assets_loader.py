@@ -3,6 +3,9 @@
 # Chaque sprite est decoupe dans une feuille avec un rectangle (x, y, largeur, hauteur)
 # trouve a la main en regardant la feuille.
 
+import math
+import random
+from array import array
 import pygame
 
 DOSSIER = "assets/Pixel Art Top Down - Basic v1.2.3/Texture/"
@@ -136,3 +139,77 @@ def load_sprites(taille):
     sprites["arche_porte"] = decouper_hauteur(structures, 408, 27, 80, 64, taille * 2)
 
     return sprites
+
+
+# ---------------------------------------------------------------------------------------------
+# Sons (etape 13, facultative) : ils sont calcules par le code, echantillon par echantillon,
+# il n'y a aucun fichier audio. Un echantillon = un nombre entre -32767 et 32767.
+
+
+def faire_son(echantillons):
+    # Transforme une liste de valeurs entre -1 et 1 en son pygame (16 bits signes).
+    # Si le mixer est en stereo, on ecrit chaque echantillon deux fois (gauche et droite).
+    canaux = pygame.mixer.get_init()[2]
+    donnees = array("h")
+    for valeur in echantillons:
+        valeur = max(-1.0, min(1.0, valeur))
+        for k in range(canaux):
+            donnees.append(int(valeur * 32767))
+    return pygame.mixer.Sound(buffer=donnees.tobytes())
+
+
+def creer_ambiance(frequence):
+    # Ambiance de prairie de 6 secondes, jouee en boucle : du vent (bruit aleatoire adouci)
+    # qui monte et descend, et quelques chants d'oiseau.
+    duree = 6.0
+    total = int(frequence * duree)
+    hasard = random.Random(7)       # graine fixe : le son est toujours le meme
+    echantillons = []
+    adouci = 0.0
+    for i in range(total):
+        t = i / float(frequence)
+        # Le vent : on adoucit le bruit (filtre passe-bas tout simple) pour qu'il souffle au lieu de gresiller.
+        adouci = adouci + 0.03 * (hasard.uniform(-1, 1) - adouci)
+        # Le volume du vent passe par 0 au debut et a la fin : la boucle ne fait pas de "clic".
+        rafale = math.sin(math.pi * t / duree) ** 2
+        echantillons.append(adouci * 1.6 * (0.3 + 0.7 * rafale))
+
+    # Chants d'oiseau : de petits "cui" (note qui monte vite), a deux moments de la boucle.
+    for debut in (1.3, 1.5, 1.7, 4.2, 4.4):
+        depart = int(debut * frequence)
+        longueur = int(0.09 * frequence)
+        phase = 0.0
+        for i in range(longueur):
+            avance = i / float(longueur)
+            note = 2600 + 1400 * avance
+            phase = phase + 2 * math.pi * note / frequence
+            enveloppe = math.sin(math.pi * avance)
+            echantillons[depart + i] = echantillons[depart + i] + 0.12 * enveloppe * math.sin(phase)
+    return faire_son(echantillons)
+
+
+def creer_pas(frequence):
+    # Bruit de pas : un petit "pof" tres court (bruit adouci qui s'eteint vite).
+    total = int(frequence * 0.08)
+    hasard = random.Random(3)
+    echantillons = []
+    adouci = 0.0
+    for i in range(total):
+        adouci = adouci + 0.25 * (hasard.uniform(-1, 1) - adouci)
+        enveloppe = math.exp(-i / (total / 5.0))
+        echantillons.append(adouci * 1.2 * enveloppe)
+    return faire_son(echantillons)
+
+
+def load_sounds():
+    # Retourne un dictionnaire de sons, ou un dictionnaire vide si l'ordinateur n'a pas de son
+    # (le jeu marche alors sans son). Doit etre appele apres pygame.init().
+    if not pygame.mixer.get_init():
+        return {}
+    frequence = pygame.mixer.get_init()[0]
+    sons = {}
+    sons["ambiance"] = creer_ambiance(frequence)
+    sons["pas"] = creer_pas(frequence)
+    sons["ambiance"].set_volume(0.35)
+    sons["pas"].set_volume(0.5)
+    return sons

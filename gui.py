@@ -6,6 +6,7 @@
 # Etape 8  : bouton "Resoudre (BFS)" qui affiche le cout, le nombre de pas et le temps de calcul.
 # Etape 9  : apres le BFS, trajectoire tracee et lecture automatique de la solution.
 # Etape 11 : menu de choix du niveau (au lancement, ou touche M / bouton "Menu").
+# Etape 13 : sons crees par le code (ambiance de prairie, bruit de pas), touche S pour couper.
 
 import math
 import time
@@ -15,7 +16,7 @@ import pygame
 from levels import LEVELS
 from sokoban import SokobanPuzzle
 from search import BFS
-from assets_loader import load_sprites
+from assets_loader import load_sprites, load_sounds
 
 TAILLE = 44            # taille d'une case en pixels
 MARGE = 2              # marge autour du plus grand niveau, en nombre de cases (sert de decor)
@@ -49,6 +50,8 @@ class Game:
     def __init__(self, numero=0, menu=True):
         # numero : position du niveau dans LEVELS (0 = Exemple 1).
         # menu : vrai pour commencer par le menu de choix du niveau.
+        # Son en mono, 22050 echantillons par seconde : suffisant, et les sons se calculent plus vite.
+        pygame.mixer.pre_init(22050, -16, 1, 512)
         pygame.init()
 
         # La zone de jeu a toujours la meme taille : celle du plus grand niveau + la marge.
@@ -69,6 +72,11 @@ class Game:
         # Les sprites se chargent apres set_mode.
         self.sprites = load_sprites(TAILLE)
         self.polices = {}     # polices deja creees, rangees par taille (voir ecrire)
+
+        # Sons : dictionnaire vide si l'ordinateur n'a pas de carte son (le jeu marche quand meme).
+        self.sons = load_sounds()
+        self.son_actif = False
+        self.changer_son()
 
         # Les trois boutons de la barre d'infos (rectangles cliquables).
         self.bouton_resoudre = pygame.Rect(14, hauteur + 52, 200, 34)
@@ -111,6 +119,15 @@ class Game:
         self.coups = 0          # nombre de deplacements faits a la main
         self.annuler_solution()
         pygame.display.set_caption("Sokoban - Niveau " + str(numero + 1))
+
+    def changer_son(self):
+        # Allume ou coupe le son (touche S). L'ambiance tourne en boucle (loops=-1) tant que le son est allume.
+        self.son_actif = not self.son_actif
+        if "ambiance" in self.sons:
+            if self.son_actif:
+                self.sons["ambiance"].play(-1)
+            else:
+                self.sons["ambiance"].stop()
 
     def ouvrir_menu(self):
         # Retour au menu : on arrete la solution automatique et l'animation de fin de niveau.
@@ -157,6 +174,8 @@ class Game:
                     self.charger_niveau(self.numero)
                 if evenement.key == pygame.K_m:
                     self.ouvrir_menu()
+                if evenement.key == pygame.K_s:
+                    self.changer_son()
                 if evenement.key == pygame.K_b and self.phase == "jeu":
                     self.resoudre()
                 if evenement.key in TOUCHES and self.phase == "jeu":
@@ -176,6 +195,8 @@ class Game:
         if evenement.type == pygame.KEYDOWN:
             if evenement.key == pygame.K_ESCAPE:
                 self.en_cours = False
+            if evenement.key == pygame.K_s:
+                self.changer_son()
             if evenement.unicode.isdigit():
                 numero = int(evenement.unicode) - 1
                 if 0 <= numero < len(LEVELS):
@@ -193,6 +214,8 @@ class Game:
             if nom == action:
                 self.etat = suivant
                 self.coups = self.coups + 1
+                if self.son_actif and "pas" in self.sons:
+                    self.sons["pas"].play()
                 return
 
     def resoudre(self):
@@ -607,14 +630,14 @@ class Game:
 
         if self.phase == "menu":
             self.ecran.blit(self.ecrire("Menu", 18, (255, 245, 215)), (14, haut + 6))
-            aide = "Clic sur un niveau ou touche 1 a " + str(len(LEVELS)) + "   Echap : quitter"
+            aide = "Clic sur un niveau ou touche 1 a " + str(len(LEVELS)) + "   S : son   Echap : quitter"
             self.ecran.blit(self.ecrire(aide, 14, (220, 200, 170)), (14, haut + 92))
             return
 
         titre = "Niveau " + str(self.numero + 1) + "  -  Coups : " + str(self.coups)
         self.ecran.blit(self.ecrire(titre, 18, (255, 245, 215)), (14, haut + 6))
         self.ecran.blit(self.ecrire(self.resultat, 18, (255, 225, 120)), (14, haut + 28))
-        aide = "Fleches : bouger  R : recommencer  B : resoudre  M : menu  Echap : quitter"
+        aide = "Fleches: bouger  R: recommencer  B: BFS  M: menu  S: son  Echap: quitter"
         self.ecran.blit(self.ecrire(aide, 14, (220, 200, 170)), (14, haut + 92))
 
         self.dessiner_bouton(self.bouton_resoudre, "Resoudre (BFS)")
