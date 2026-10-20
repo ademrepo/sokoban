@@ -12,11 +12,15 @@ ACTIONS = {
 
 class SokobanPuzzle:
 
-    def __init__(self, grid):
+    def __init__(self, grid, player_pos=None):
         # Correspond à init() dans l'énoncé.
         # On stocke la grille sous forme de tuple de chaînes (immuable, donc hashable).
+        # player_pos : position du joueur si on la connaît déjà (c'est le cas pour un successeur :
+        # on vient de le déplacer). Sinon (niveau de départ), on la cherche une seule fois dans la grille.
         self.grid = tuple(grid)
-        self.player_pos = self.trouver_joueur()
+        if player_pos is None:
+            player_pos = self.trouver_joueur()
+        self.player_pos = player_pos
 
     def trouver_joueur(self):
         # Cherche le joueur dans la grille ('R' ou '.') et retourne sa position (ligne, colonne).
@@ -51,6 +55,7 @@ class SokobanPuzzle:
     def successorFunction(self):
         # Génère la liste des (action, successeur) pour les 4 directions, dans
         # l'ordre UP, DOWN, LEFT, RIGHT, pour que le résultat soit déterministe.
+        # n1 = case où le joueur veut aller, n2 = case juste derrière (utile seulement pour pousser).
         successeurs = []
         r, c = self.player_pos
 
@@ -59,66 +64,43 @@ class SokobanPuzzle:
             n1 = (r + dr, c + dc)
             n1_case = self.grid[n1[0]][n1[1]]
 
-            if n1_case == "O":
-                # Mur : déplacement impossible.
-                continue
-
             if n1_case == " " or n1_case == "S":
-                # Case libre : le joueur se déplace simplement.
-                nouvelle_grille = self.deplacer_joueur(r, c, n1[0], n1[1])
-                successeurs.append((action, SokobanPuzzle(nouvelle_grille)))
-                continue
-
-            if n1_case == "B" or n1_case == "*":
-                # Caisse : on ne peut la pousser que si la case suivante est libre.
-                n2 = (r + 2 * dr, c + 2 * dc)
-                n2_case = self.grid[n2[0]][n2[1]]
+                # Case libre : le joueur avance simplement (sa nouvelle position est n1, pas besoin de la chercher).
+                successeurs.append((action, SokobanPuzzle(self.nouvelle_grille(r, c, dr, dc, False), n1)))
+            elif n1_case == "B" or n1_case == "*":
+                # Caisse : on ne peut la pousser que si la case derrière est libre
+                # (pas un mur, pas une autre caisse).
+                n2_case = self.grid[r + 2 * dr][c + 2 * dc]
                 if n2_case == " " or n2_case == "S":
-                    nouvelle_grille = self.pousser_caisse(r, c, n1[0], n1[1], n2[0], n2[1])
-                    successeurs.append((action, SokobanPuzzle(nouvelle_grille)))
-                continue
+                    successeurs.append((action, SokobanPuzzle(self.nouvelle_grille(r, c, dr, dc, True), n1)))
+            # Sinon c'est un mur : déplacement impossible, pas de successeur.
 
         return successeurs
 
-    def deplacer_joueur(self, r, c, nr, nc):
-        # Construit une nouvelle grille avec le joueur déplacé de (r,c) vers (nr,nc).
+    def nouvelle_grille(self, r, c, dr, dc, pousse):
+        # Construit la grille de l'état suivant (l'état actuel n'est jamais modifié) :
+        # le joueur va de (r, c) vers (r+dr, c+dc) ; si pousse est vrai, il pousse la caisse
+        # qui était sur cette case vers (r+2dr, c+2dc).
         lignes = [list(ligne) for ligne in self.grid]
 
-        # Case quittée par le joueur.
-        if self.grid[r][c] == "R":
-            lignes[r][c] = " "
-        elif self.grid[r][c] == ".":
+        # Case quittée par le joueur : elle redevient vide, ou cible s'il était sur une cible.
+        if self.grid[r][c] == ".":
             lignes[r][c] = "S"
-
-        # Case occupée par le joueur.
-        if self.grid[nr][nc] == "S":
-            lignes[nr][nc] = "."
         else:
-            lignes[nr][nc] = "R"
-
-        return ["".join(ligne) for ligne in lignes]
-
-    def pousser_caisse(self, r, c, nr, nc, nnr, nnc):
-        # Construit une nouvelle grille : le joueur avance de (r,c) vers (nr,nc)
-        # et pousse la caisse de (nr,nc) vers (nnr,nnc).
-        lignes = [list(ligne) for ligne in self.grid]
-
-        # Case quittée par le joueur.
-        if self.grid[r][c] == "R":
             lignes[r][c] = " "
-        elif self.grid[r][c] == ".":
-            lignes[r][c] = "S"
 
-        # Case où arrive la caisse.
-        if self.grid[nnr][nnc] == "S":
-            lignes[nnr][nnc] = "*"
+        # Case où arrive le joueur : '.' si c'est une cible (avec ou sans caisse avant), sinon 'R'.
+        case = self.grid[r + dr][c + dc]
+        if case == "S" or case == "*":
+            lignes[r + dr][c + dc] = "."
         else:
-            lignes[nnr][nnc] = "B"
+            lignes[r + dr][c + dc] = "R"
 
-        # Case où arrive le joueur (où était la caisse).
-        if self.grid[nr][nc] == "*":
-            lignes[nr][nc] = "."
-        else:
-            lignes[nr][nc] = "R"
+        # Case où arrive la caisse poussée : '*' si c'est une cible, sinon 'B'.
+        if pousse:
+            if self.grid[r + 2 * dr][c + 2 * dc] == "S":
+                lignes[r + 2 * dr][c + 2 * dc] = "*"
+            else:
+                lignes[r + 2 * dr][c + 2 * dc] = "B"
 
         return ["".join(ligne) for ligne in lignes]

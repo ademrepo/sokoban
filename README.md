@@ -45,25 +45,27 @@ Voir `docs/PLAN.md` pour la liste à jour. En résumé à ce stade :
 python main.py
 ```
 
-Le jeu s'ouvre sur le **menu** : cliquer sur un niveau (ou taper son numéro, 1 à 8).
+Le jeu s'ouvre sur le **menu** : cliquer sur un niveau, taper son numéro (1 à 8), ou choisir avec
+les flèches puis Entrée.
 
 | Touche / bouton | Effet |
 |---|---|
-| Flèches | bouger le chat et pousser les caisses |
-| B ou « Résoudre (BFS) » | résout depuis la position actuelle : affiche coût, nombre de pas et temps, trace la trajectoire, puis joue la solution |
+| Flèches | bouger le chat et pousser les caisses (garder appuyé pour avancer en continu) |
+| Z, Retour arrière ou « Annuler » | annuler le dernier coup |
+| B ou « Résoudre (BFS) » | résout depuis la position actuelle : affiche le coût de la solution, les steps (nœuds développés par le BFS) et le temps, trace la trajectoire, puis joue la solution |
 | R ou « Recommencer » | recommencer le niveau |
 | M ou « Menu » | retour au menu |
 | S | couper / remettre le son |
 | Échap | quitter |
 
-Quand toutes les caisses sont sur les cibles, la porte s'ouvre, le chat y va, la pancarte « Bravo »
-s'affiche et on passe au niveau suivant.
+Quand toutes les caisses sont sur les cibles, la porte s'ouvre, le chat y va, puis la pancarte
+« Bravo » propose « Rejouer » (R), « Niveau suivant » (Entrée ou N) ou « Menu » (M).
 
 Autres façons de lancer :
 
 ```
 python main.py --niveau 3      # ouvre directement le niveau 3 (1 à 8), sans menu
-python main.py --console       # sans fenêtre : BFS sur les 8 niveaux (solution, coût, temps)
+python main.py --console       # sans fenêtre : BFS sur les 8 niveaux (solution, coût, steps, temps)
 ```
 
 Le jeu peut être lancé depuis n'importe quel dossier (`python chemin/vers/main.py`).

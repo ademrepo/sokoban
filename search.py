@@ -15,10 +15,12 @@ def BFS(s, successorsFn, isGoal):
     # s : etat initial
     # successorsFn : fonction qui retourne la liste des (action, successeur) pour un etat
     # isGoal : fonction qui teste si un etat est un etat but
-    # Retourne le noeud but trouve, ou None si aucune solution.
+    # Retourne deux valeurs : (noeud but trouve, ou None si aucune solution ; steps).
+    # steps = nombre de tours de la boucle sur Open, c'est-a-dire le nombre de noeuds developpes.
+    # Il mesure le travail fait par la recherche (sa complexite en temps), comme demande en cours.
     racine = Node(s, None, None)
     if isGoal(racine.state):
-        return racine
+        return racine, 0      # l'etat initial est deja un but : aucun noeud developpe
 
     ouvert = deque()      # Open : file FIFO (on enleve a gauche, on ajoute a droite)
     ouvert.append(racine)
@@ -31,7 +33,9 @@ def BFS(s, successorsFn, isGoal):
     fermeSet = set()
     ouvertSet.add(racine.state)
 
+    steps = 0
     while len(ouvert) > 0:
+        steps = steps + 1
         courant = ouvert.popleft()     # le noeud le moins profond
         ouvertSet.remove(courant.state)
         ferme.append(courant)
@@ -41,8 +45,8 @@ def BFS(s, successorsFn, isGoal):
             enfant = Node(successeur, courant, action)
             if enfant.state not in fermeSet and enfant.state not in ouvertSet:
                 if isGoal(enfant.state):
-                    return enfant
+                    return enfant, steps
                 ouvert.append(enfant)
                 ouvertSet.add(enfant.state)
 
-    return None
+    return None, steps

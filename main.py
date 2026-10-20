@@ -13,26 +13,26 @@ from gui import Game
 
 
 def resoudre_niveau(niveau):
-    # Lance le BFS sur un niveau et retourne (noeud but ou None, temps en secondes).
+    # Lance le BFS sur un niveau et retourne (noeud but ou None, steps, temps en secondes).
     etat_initial = SokobanPuzzle(niveau["grid"])
     debut = time.time()
-    noeud = BFS(etat_initial, lambda st: st.successorFunction(), lambda st: st.isGoal())
+    noeud, steps = BFS(etat_initial, lambda st: st.successorFunction(), lambda st: st.isGoal())
     duree = time.time() - debut
-    return noeud, duree
+    return noeud, steps, duree
 
 
 def mode_console():
-    # Resout chaque niveau et affiche la solution, le cout et le temps de calcul.
+    # Resout chaque niveau et affiche la solution, le cout, les steps (noeuds developpes) et le temps.
     for niveau in LEVELS:
         print("=== " + niveau["name"] + " ===")
         print(SokobanPuzzle(niveau["grid"]))
-        noeud, duree = resoudre_niveau(niveau)
+        noeud, steps, duree = resoudre_niveau(niveau)
         if noeud is None:
             print("Aucune solution")
         else:
-            actions = noeud.getSolution()
-            print("Solution :", " ".join(actions))
-            print("Cout (g) :", noeud.g, "| Nombre de pas :", len(actions))
+            print("Solution :", " ".join(noeud.getSolution()))
+            print("Cout (g) :", noeud.g)
+        print("Steps (noeuds developpes) :", steps)
         print("Temps BFS : %.3f s" % duree)
         print()
 

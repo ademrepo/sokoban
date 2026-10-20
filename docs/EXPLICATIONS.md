@@ -62,8 +62,8 @@ Pour chaque direction `(dr, dc)`, le joueur est en `(r, c)` :
 | Case n1 | Ce qui se passe |
 |---|---|
 | `O` (mur) | coup impossible |
-| `' '` ou `S` (libre) | le joueur avance (`deplacer_joueur`) |
-| `B` ou `*` (caisse) | si n2 est `' '` ou `S` : le joueur pousse la caisse (`pousser_caisse`) ; sinon (mur ou autre caisse) : impossible |
+| `' '` ou `S` (libre) | le joueur avance (`nouvelle_grille(..., pousse=False)`) |
+| `B` ou `*` (caisse) | si n2 est `' '` ou `S` : le joueur pousse la caisse (`nouvelle_grille(..., pousse=True)`) ; sinon (mur ou autre caisse) : impossible |
 
 Mise à jour des cases (on construit une **nouvelle** grille, on ne modifie jamais l'état actuel) :
 - case quittée : `R` → `' '` et `.` → `S` (on « découvre » la cible) ;
@@ -110,21 +110,26 @@ L'interface utilise les deux : `getSolution()` pour rejouer les coups, `getPath(
 | Pseudo-code du cours | Code |
 |---|---|
 | `init_node <- Node(s, None, None)` | `racine = Node(s, None, None)` |
-| `if isGoal(init_node.state) return init_node` | idem |
+| `if isGoal(init_node.state) return init_node` | `return racine, 0` |
 | `Open: queue (FIFO)` | `ouvert = deque()` |
 | `Closed: list` | `ferme = []` |
+| `while (not Open.empty())` | `while len(ouvert) > 0:` puis `steps = steps + 1` |
 | `current <- Open.dequeue()` | `courant = ouvert.popleft()` (le moins profond) |
 | `Closed.add(current)` | `ferme.append(courant)` |
 | `for each (action, successor) in successorsFn(...)` | idem |
 | `child <- Node(successor, current, action)` | `enfant = Node(successeur, courant, action)` |
 | `if child.state not in Closed and not in Open` | test sur `fermeSet` / `ouvertSet` |
-| `if isGoal(child.state) return child` | idem (test au moment de la génération) |
+| `if isGoal(child.state) return child` | `return enfant, steps` (test au moment de la génération) |
 | `Open.enqueue(child)` | `ouvert.append(enfant)` |
-| `return None` | idem |
+| `return None` | `return None, steps` |
 
-**Seule différence : deux ensembles en plus (`ouvertSet`, `fermeSet`).** Chercher un état dans une liste prend un temps proportionnel à sa longueur ; dans un `set`, c'est presque immédiat. Ces ensembles contiennent exactement les mêmes états que `ouvert` et `ferme` et sont mis à jour en même temps. L'algorithme ne change pas, il va juste beaucoup plus vite. Sans eux, l'Exemple 5 prendrait des minutes.
+**`steps`, demandé en cours :** le BFS renvoie deux valeurs, le nœud but (ou `None`) **et** `steps`. C'est un compteur qui augmente à chaque tour de la boucle sur Open, donc le nombre de nœuds **développés**. Il mesure le travail fait par la recherche (sa complexité en temps). Il vaut 0 si l'état initial est déjà un but. À ne pas confondre avec le **coût** `g`, qui est la longueur de la solution trouvée.
 
-Appel : `BFS(etat, lambda s: s.successorFunction(), lambda s: s.isGoal())`. On passe les fonctions en paramètre, comme dans la signature du cours.
+**Différence avec le pseudo-code : deux ensembles en plus (`ouvertSet`, `fermeSet`).** Chercher un état dans une liste prend un temps proportionnel à sa longueur ; dans un `set`, c'est presque immédiat. Ces ensembles contiennent exactement les mêmes états que `ouvert` et `ferme` et sont mis à jour en même temps. L'algorithme ne change pas, il va juste beaucoup plus vite. Sans eux, l'Exemple 5 prendrait des minutes.
+
+Appel : `noeud, steps = BFS(etat, lambda s: s.successorFunction(), lambda s: s.isGoal())`. On passe les fonctions en paramètre, comme dans la signature du cours.
+
+**On manipule des nœuds, pas directement des états :** Open et Closed contiennent des `Node`. Grâce au lien `parent` de chaque nœud, on reconstruit la solution (`getSolution`) une fois le but trouvé. En revanche, pour savoir si un état a « déjà été vu », on compare les **états par leur contenu** (`__eq__` et `__hash__` comparent les grilles), pas les objets Python. Deux plateaux identiques créés séparément sont deux objets différents, mais c'est le même état.
 
 ### Propriétés (données par le cours)
 - **Complet** : si une solution existe, BFS la trouve (le but le moins profond est à une profondeur finie d).
@@ -133,27 +138,27 @@ Appel : `BFS(etat, lambda s: s.successorFunction(), lambda s: s.isGoal())`. On p
 
 ### Résultats (`python main.py --console`)
 
-| Niveau | Coût = nombre de pas | Temps BFS |
-|---|---|---|
-| Exemple 1 | 4 | 0,004 s |
-| Exemple 2 | 35 | 0,30 s |
-| Exemple 3 | 36 | 0,69 s |
-| Exemple 4 | 30 | 0,75 s |
-| Exemple 5 | 28 | 1,32 s |
-| Maison 1 | 2 | 0,000 s |
-| Maison 2 | 5 | 0,001 s |
-| Maison 3 | 10 | 0,05 s |
+| Niveau | Coût (longueur de la solution) | Steps (nœuds développés) | Temps BFS |
+|---|---|---|---|
+| Exemple 1 | 4 | 11 | 0,000 s |
+| Exemple 2 | 35 | 1 806 | 0,06 s |
+| Exemple 3 | 36 | 6 013 | 0,13 s |
+| Exemple 4 | 30 | 6 051 | 0,14 s |
+| Exemple 5 | 28 | 11 659 | 0,24 s |
+| Maison 1 | 2 | 3 | 0,000 s |
+| Maison 2 | 5 | 12 | 0,000 s |
+| Maison 3 | 10 | 571 | 0,01 s |
 
-(Temps mesurés sur le PC de développement ; ils changent d'un ordinateur à l'autre. Les coûts, eux, sont toujours les mêmes. Ils ont été confirmés par un solveur indépendant, voir session 13.)
+(Temps mesurés sur le PC de développement ; ils changent d'un ordinateur à l'autre. Les coûts et les steps, eux, sont toujours les mêmes, et les tests les vérifient. Les coûts ont été confirmés par un solveur indépendant, voir session 13.)
 
-« Coût » et « Nombre de pas » sont égaux, car chaque pas coûte 1. On affiche les deux parce que l'énoncé demande les deux.
+Ce tableau montre bien la différence : une solution de 28 coups (Exemple 5) a demandé de développer 11 659 nœuds. Les steps grandissent beaucoup plus vite que le coût, c'est le O(b^d) du cours.
 
 ---
 
 ## 4. L'interface (énoncé C) : `gui.py`
 
 ### 4.1 Organisation
-Une seule classe `Game`, avec la boucle classique de Pygame (30 images par seconde) :
+Une seule classe `Game`, avec la boucle classique de Pygame (60 images par seconde) :
 ```
 while en_cours:
     handle_events()   # clavier / souris
@@ -162,50 +167,81 @@ while en_cours:
 ```
 Le jeu est piloté par une variable `phase` :
 ```
-menu → jeu → ouverture → marche → queue → bravo → glisse → jeu (niveau suivant)
+menu → jeu → ouverture → marche → queue → bravo ─(bouton « Niveau suivant »)→ glisse → jeu
 ```
-- `menu` : choix du niveau (clic ou touches 1 à 8).
+- `menu` : choix du niveau (cartes avec un aperçu ; clic, touches 1 à 8, ou flèches + Entrée).
 - `jeu` : on joue. **La victoire est décidée uniquement par `isGoal()`.**
 - `ouverture` : la porte s'ouvre et s'illumine.
 - `marche` : le chat va jusqu'à la porte.
 - `queue` : il remue la queue.
-- `bravo` : la pancarte descend.
+- `bravo` : la pancarte descend et **attend** : « Rejouer », « Niveau suivant » ou « Menu ».
 - `glisse` : l'ancien niveau sort à gauche, le nouveau entre à droite.
 
 ### 4.2 Jouer à la main
-`bouger(action)` parcourt `successorFunction()` et prend le successeur qui porte le nom de la touche. Si l'action n'est pas dans la liste (mur, caisse bloquée), il ne se passe rien. **Aucune règle n'est réécrite dans l'interface.**
+`bouger(action)` parcourt `successorFunction()` et prend le successeur qui porte le nom de la touche. Si l'action n'est pas dans la liste (mur, caisse bloquée), l'état ne change pas. **Aucune règle n'est réécrite dans l'interface.**
+
+Le reste de `bouger` ne sert qu'à l'animation :
+- on retient la case de départ et d'arrivée du chat. Si la case d'arrivée contenait une caisse dans l'ancien état, c'est qu'elle a été poussée : on retient aussi son déplacement ;
+- pendant 140 ms, le chat et la caisse **glissent** d'une case à l'autre. `avancement()` donne un nombre entre 0 et 1 qui ralentit à la fin (`1 - (1 - t)²`), ce qui rend le mouvement plus doux. Le chat fait un petit saut et se tourne vers la gauche ou la droite ;
+- si le coup est refusé, le chat fait un petit « choc » vers l'obstacle : on voit que la touche a été prise en compte ;
+- confort : une flèche appuyée pendant un pas est jouée juste après (`action_en_attente`) ; une flèche gardée appuyée fait avancer le chat en continu, grâce à `pygame.key.set_repeat`, qui renvoie la touche tout seul tant qu'on appuie ;
+- **Annuler** (Z) : chaque état précédent est gardé dans `historique` (les états ne sont jamais modifiés, donc on peut les garder tels quels) ; annuler, c'est reprendre le dernier.
 
 ### 4.3 Bouton « Résoudre (BFS) » : la simulation de la solution
 1. On lance `BFS` depuis la position **actuelle** : on peut donc jouer quelques coups puis demander la solution.
 2. On mesure le temps avec `time.time()` avant et après.
-3. On affiche « BFS : coût X | Y pas | Z s ».
+3. On affiche « BFS : coût X | Y steps | Z s » : le coût de la solution, le nombre de nœuds développés et le temps.
 4. `getPath()` donne la trajectoire, dessinée en bleu sur le sol ; elle raccourcit à mesure que le chat avance.
-5. La lecture automatique rejoue `getSolution()` : un coup toutes les 350 ms, avec la même fonction `bouger`.
+5. La lecture automatique rejoue `getSolution()` : un coup toutes les 260 ms, avec la même fonction `bouger`.
 
 ### 4.4 La fin de niveau
-L'animation ne compte ni dans les coups ni dans le coût. Pour amener le chat devant la porte, `chemin_vers_porte` fait un petit parcours en largeur sur les cases (même idée que le BFS : une file et les cases déjà vues). Ce n'est pas un coup du jeu, juste un chemin pour l'animation. La porte est un simple dessin : la case reste un mur.
+La victoire n'est déclarée qu'une fois le dernier pas fini, pour qu'on voie la caisse arriver. L'animation de fin ne compte ni dans les coups ni dans le coût. Pour amener le chat devant la porte, `chemin_vers_porte` fait un petit parcours en largeur sur les cases (même idée que le BFS : une file et les cases déjà vues). Ce n'est pas un coup du jeu, juste un chemin pour l'animation. La porte est un simple dessin : la case reste un mur.
 
 ### 4.5 Les dessins
-- Herbe, sol, murs, caisses, décor et porte viennent du pack « Pixel Art Top Down - Basic » (Cainos, itch.io), découpés dans `assets_loader.py`.
-- Le chat, les plaques cibles (contour doré) et la pancarte sont dessinés avec `pygame.draw`.
-- Le décor est identique dans tous les niveaux et posé par des règles fixes (pas de hasard) : le rendu est toujours le même.
+- Herbe, sol, murs, caisses, décor (arbres, statues, banc, vases, tonneaux, lanternes...) et porte viennent du pack « Pixel Art Top Down - Basic » (Cainos, itch.io), découpés dans `assets_loader.py`.
+- Le chat, les plaques cibles, la pancarte, les boutons et les cartes du menu sont dessinés avec `pygame.draw`.
+- **Décor** : il est posé par des règles fixes (pas de hasard), et `poser` vérifie toutes les cases que l'image recouvre. Un objet qui toucherait le niveau ou un autre objet n'est pas posé, donc le même décor s'adapte aux petits et aux grands niveaux.
+- **Fond pré-dessiné** : ce qui ne bouge jamais (herbe, haie, décor, murs, sol) est dessiné une seule fois par niveau (`preparer_fond`), puis recopié à chaque image. On ne redessine que ce qui bouge.
+- **Effets** (`dessiner_effets`) : lucioles qui flottent et clignotent, poussière quand on pousse une caisse et étincelles quand elle arrive sur une cible (de petits cercles qui partent en ligne droite et rapetissent) ; un halo doré entoure une caisse bien placée. Le chat respire et remue la queue quand il attend. Tout est fait avec des cercles transparents (`creer_halo`), sans image en plus. Ces effets ne touchent jamais à l'état du jeu.
 
 ### 4.6 Les sons
 Il n'y a aucun fichier audio : les sons sont **calculés** dans `assets_loader.py`. Un son n'est qu'une suite de nombres entre -1 et 1 (22 050 par seconde) :
 - le vent : un bruit aléatoire « adouci » (on garde une moyenne qui suit lentement le bruit), dont le volume monte et descend ;
-- les oiseaux : une sinusoïde dont la fréquence monte vite ;
 - le pas : un bruit très court qui s'éteint vite.
 
 La touche S coupe le son. Si l'ordinateur n'a pas de son, le jeu marche quand même.
 
 ---
 
+## 4 bis. Règles de programmation respectées (et pourquoi)
+
+Ce sont les règles qu'un correcteur vérifie souvent : tester les bonnes choses, dans le bon ordre, sans refaire un travail inutile.
+
+| Règle | Dans le code |
+|---|---|
+| Le test de but ne regarde **que l'état**, et seulement ce qui compte : les caisses. Il ne dépend ni du joueur, ni de l'action jouée, ni du fait qu'il ait bougé. | `isGoal()` : « plus aucun `B` dans la grille ». |
+| Le test de but s'arrête **dès qu'il a la réponse**. | `isGoal()` renvoie `False` à la première ligne qui contient un `B`. |
+| Le but est testé **dès qu'un nœud est créé**, avant de le mettre dans Open, et l'état initial est testé tout de suite. | `BFS` : `if isGoal(racine.state)`, puis `if isGoal(enfant.state)` juste après le test « déjà vu ». On évite de développer un niveau de plus. |
+| On ne remet **jamais** un état déjà vu dans Open (sinon on tourne en rond). | Test « pas dans Closed et pas dans Open ». |
+| Ce test est **rapide** (temps presque constant, pas un parcours de liste). | `ouvertSet` / `fermeSet` (ensembles) + `__hash__` sur la grille. |
+| On compare les états **par leur contenu**, pas comme objets Python. | `__eq__` et `__hash__` utilisent la grille. |
+| Un successeur est un **nouvel** état : le père n'est jamais modifié. | `nouvelle_grille` construit une nouvelle grille ; testé dans `test_core.py`. |
+| On ne **recalcule pas** ce qu'on connaît déjà. | La position du joueur est cherchée une seule fois (niveau de départ). Pour un successeur, on la donne directement (`n1`), sans parcourir la grille (testé aussi). Le BFS va environ deux fois plus vite. |
+| La file Open se vide **par la gauche en temps constant**. | `deque.popleft()` (une liste avec `pop(0)` recopierait tout à chaque fois). |
+| Le chemin n'est pas recopié dans chaque nœud. | Chaque `Node` garde seulement son père ; `getSolution()` remonte les pères une seule fois, à la fin. |
+| Les règles du jeu sont écrites **à un seul endroit**. | `successorFunction()`. L'interface l'appelle pour chaque flèche au lieu de recopier les règles. |
+| Dans un `and`, le test **le moins cher d'abord**. | Interface : `if not self.en_mouvement() and self.etat.isGoal()`. `isGoal`, qui parcourt la grille, n'est appelé que quand le chat est à l'arrêt. |
+| Les successeurs sont générés **toujours dans le même ordre**. | UP, DOWN, LEFT, RIGHT : mêmes solutions et mêmes steps à chaque lancement (les tests le vérifient). |
+| Le dessin n'est **pas refait** quand il ne change pas. | `preparer_fond` dessine le décor une fois par niveau. |
+
+---
+
 ## 5. Les tests (`python test_core.py`)
 17 tests, avec de simples `assert` :
-- **règles** : un mur bloque ; pousser une caisse dans un mur, ou deux caisses, est interdit ; une caisse poussée sur une cible devient `*` ; une caisse poussée hors d'une cible redevient `B` ; marcher sur une cible puis la quitter ; un successeur ne modifie pas l'état parent ;
+- **règles** : un mur bloque ; pousser une caisse dans un mur, ou deux caisses, est interdit ; une caisse poussée sur une cible devient `*` ; une caisse poussée hors d'une cible redevient `B` ; marcher sur une cible puis la quitter ; un successeur ne modifie pas l'état parent ; la position du joueur donnée aux successeurs est la bonne ;
 - **niveaux** : bien formés (un seul joueur, autant de caisses que de cibles, bord en murs), pas déjà résolus au départ ;
 - **`isGoal`** et **`Node`** : la racine, une chaîne de trois noeuds ;
-- **BFS** : un état déjà but, une seule poussée, un niveau sans solution, la solution rejouée arrive au but, et tous les niveaux sont résolus avec leur **coût optimal** (4, 35, 36, 30, 28, 2, 5, 10).
+- **BFS** : un état déjà but (0 step), une seule poussée (1 step), un niveau sans solution (2 steps), et tous les niveaux sont résolus avec leur **coût optimal** (4, 35, 36, 30, 28, 2, 5, 10) et leur nombre de **steps** attendu ; la solution de chaque niveau, rejouée avec `successorFunction`, arrive bien au but.
 
 ---
 
@@ -213,6 +249,15 @@ La touche S coupe le son. Si l'ordinateur n'a pas de son, le jeu marche quand m�
 
 **Pourquoi BFS trouve la solution la plus courte ?**
 Il explore niveau par niveau : tous les états à 1 coup, puis tous ceux à 2 coups, etc. Le premier but trouvé est donc à la profondeur minimale. Comme chaque coup coûte 1, c'est aussi le coût minimal.
+
+**C'est quoi la fonction successeur ?**
+La fonction qui répond à « depuis cet état, où peut-on aller ? ». Elle renvoie la liste des paires (action, état enfant), une par coup légal. Un enfant est une copie du père avec une seule modification (le déplacement), et le père n'est jamais modifié. C'est `successorFunction()`, le seul endroit où sont écrites les règles.
+
+**Pourquoi le BFS manipule des nœuds et pas directement des états ?**
+Un état ne sait pas d'où il vient. Un nœud garde son père et l'action qui y mène : une fois le but trouvé, on remonte les pères pour obtenir la solution. Mais pour le test « déjà vu ? », on compare les états par leur contenu (la grille), jamais les objets Python eux-mêmes.
+
+**Que représente `steps` ?**
+Le nombre de tours de la boucle sur Open, donc de nœuds développés : c'est le travail fait par la recherche. Le coût, lui, est la longueur de la solution. Exemple 5 : coût 28, mais 11 659 steps.
 
 **Pourquoi tester `isGoal` à la génération et pas à la sortie de la file ?**
 C'est ce que fait le pseudo-code du cours (Fig. 1.19). Avec des coûts tous égaux à 1, ça ne change pas l'optimalité, et ça évite de développer un niveau de plus.
@@ -230,7 +275,7 @@ Une liste n'est pas hashable, on ne pourrait pas la mettre dans un `set`. Un tup
 Il y a autant de caisses que de cibles. Plus de `B` veut dire que toutes les caisses sont sur une cible (`*`), dans n'importe quel ordre.
 
 **Qu'est-ce qui est lent et pourquoi ?**
-Le BFS sur les grands niveaux (Exemple 5 : environ 1,3 s), car le nombre d'états grandit très vite avec la profondeur (O(b^d)). Pendant ce calcul, la fenêtre attend : on n'utilise pas de thread, pour garder le code simple.
+Le BFS sur les grands niveaux (Exemple 5 : 11 659 nœuds développés, entre 0,2 et 1,3 s selon l'ordinateur), car le nombre d'états grandit très vite avec la profondeur (O(b^d)). Pendant ce calcul, la fenêtre attend : on n'utilise pas de thread, pour garder le code simple.
 
 **Pourquoi pas de détection de blocage (caisse coincée dans un coin) ?**
 L'énoncé ne le demande pas. Le BFS finit quand même : il explore ces états puis les abandonne quand ils n'ont plus de successeurs nouveaux.
