@@ -178,32 +178,18 @@ def faire_son(echantillons):
 
 
 def creer_ambiance(frequence):
-    # Ambiance de prairie de 6 secondes, jouee en boucle : du vent (bruit aleatoire adouci)
-    # qui monte et descend, et quelques chants d'oiseau.
+    # Ambiance de prairie de 6 secondes, jouee en boucle : du vent (bruit aleatoire adouci) qui monte et descend.
     duree = 6.0
     total = int(frequence * duree)
     hasard = random.Random(7)       # graine fixe : le son est toujours le meme
     echantillons = []
     adouci = 0.0
     for i in range(total):
-        t = i / float(frequence)
-        # Le vent : on adoucit le bruit (filtre passe-bas tout simple) pour qu'il souffle au lieu de gresiller.
+        # On adoucit le bruit (chaque valeur se rapproche un peu du nouveau tirage) pour qu'il souffle au lieu de gresiller.
         adouci = adouci + 0.03 * (hasard.uniform(-1, 1) - adouci)
-        # Le volume du vent passe par 0 au debut et a la fin : la boucle ne fait pas de "clic".
-        rafale = math.sin(math.pi * t / duree) ** 2
+        # Le volume suit une bosse : 0 au debut, maximum au milieu, 0 a la fin (la boucle ne fait pas de "clic").
+        rafale = math.sin(math.pi * i / total)
         echantillons.append(adouci * 1.6 * (0.3 + 0.7 * rafale))
-
-    # Chants d'oiseau : de petits "cui" (note qui monte vite), a deux moments de la boucle.
-    for debut in (1.3, 1.5, 1.7, 4.2, 4.4):
-        depart = int(debut * frequence)
-        longueur = int(0.09 * frequence)
-        phase = 0.0
-        for i in range(longueur):
-            avance = i / float(longueur)
-            note = 2600 + 1400 * avance
-            phase = phase + 2 * math.pi * note / frequence
-            enveloppe = math.sin(math.pi * avance)
-            echantillons[depart + i] = echantillons[depart + i] + 0.12 * enveloppe * math.sin(phase)
     return faire_son(echantillons)
 
 

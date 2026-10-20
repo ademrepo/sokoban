@@ -184,7 +184,7 @@ Le reste de `bouger` ne sert qu'à l'animation :
 - on retient la case de départ et d'arrivée du chat. Si la case d'arrivée contenait une caisse dans l'ancien état, c'est qu'elle a été poussée : on retient aussi son déplacement ;
 - pendant 140 ms, le chat et la caisse **glissent** d'une case à l'autre. `avancement()` donne un nombre entre 0 et 1 qui ralentit à la fin (`1 - (1 - t)²`), ce qui rend le mouvement plus doux. Le chat fait un petit saut et se tourne vers la gauche ou la droite ;
 - si le coup est refusé, le chat fait un petit « choc » vers l'obstacle : on voit que la touche a été prise en compte ;
-- confort : une flèche appuyée pendant un pas est jouée juste après, et une flèche gardée appuyée fait avancer le chat en continu ;
+- confort : une flèche appuyée pendant un pas est jouée juste après (`action_en_attente`) ; une flèche gardée appuyée fait avancer le chat en continu, grâce à `pygame.key.set_repeat`, qui renvoie la touche tout seul tant qu'on appuie ;
 - **Annuler** (Z) : chaque état précédent est gardé dans `historique` (les états ne sont jamais modifiés, donc on peut les garder tels quels) ; annuler, c'est reprendre le dernier.
 
 ### 4.3 Bouton « Résoudre (BFS) » : la simulation de la solution
@@ -202,12 +202,11 @@ La victoire n'est déclarée qu'une fois le dernier pas fini, pour qu'on voie la
 - Le chat, les plaques cibles, la pancarte, les boutons et les cartes du menu sont dessinés avec `pygame.draw`.
 - **Décor** : il est posé par des règles fixes (pas de hasard), et `poser` vérifie toutes les cases que l'image recouvre. Un objet qui toucherait le niveau ou un autre objet n'est pas posé, donc le même décor s'adapte aux petits et aux grands niveaux.
 - **Fond pré-dessiné** : ce qui ne bouge jamais (herbe, haie, décor, murs, sol) est dessiné une seule fois par niveau (`preparer_fond`), puis recopié à chaque image. On ne redessine que ce qui bouge.
-- **Effets** (`dessiner_effets`) : ombres de nuages qui passent, lucioles qui clignotent, poussière quand on pousse une caisse et étincelles quand elle arrive sur une cible ; les cibles « respirent », un halo doré entoure une caisse bien placée, les bords de l'image sont un peu assombris (vignette). Le chat respire et remue la queue quand il attend. Tout est fait avec des cercles et des ellipses transparents (`creer_halo`), sans image en plus. Ces effets ne touchent jamais à l'état du jeu.
+- **Effets** (`dessiner_effets`) : lucioles qui flottent et clignotent, poussière quand on pousse une caisse et étincelles quand elle arrive sur une cible (de petits cercles qui partent en ligne droite et rapetissent) ; un halo doré entoure une caisse bien placée. Le chat respire et remue la queue quand il attend. Tout est fait avec des cercles transparents (`creer_halo`), sans image en plus. Ces effets ne touchent jamais à l'état du jeu.
 
 ### 4.6 Les sons
 Il n'y a aucun fichier audio : les sons sont **calculés** dans `assets_loader.py`. Un son n'est qu'une suite de nombres entre -1 et 1 (22 050 par seconde) :
 - le vent : un bruit aléatoire « adouci » (on garde une moyenne qui suit lentement le bruit), dont le volume monte et descend ;
-- les oiseaux : une sinusoïde dont la fréquence monte vite ;
 - le pas : un bruit très court qui s'éteint vite.
 
 La touche S coupe le son. Si l'ordinateur n'a pas de son, le jeu marche quand même.

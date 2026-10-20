@@ -1,6 +1,6 @@
 # Interface Pygame du jeu (classe Game).
 # - menu de choix du niveau, avec un apercu de chaque niveau (au lancement, ou touche M / bouton "Menu") ;
-# - rendu d'un niveau avec les sprites du pack, decor autour et effets (nuages, lucioles, etincelles) ;
+# - rendu d'un niveau avec les sprites du pack, decor autour et effets (lucioles, etincelles) ;
 # - jeu manuel : le chat et les caisses glissent d'une case a l'autre, compteur de coups,
 #   annuler (Z), recommencer ;
 # - bouton "Resoudre (BFS)" : cout, steps (noeuds developpes) et temps de calcul, puis trajectoire tracee
@@ -34,7 +34,6 @@ TOUCHES = {pygame.K_UP: "UP", pygame.K_DOWN: "DOWN", pygame.K_LEFT: "LEFT", pyga
 
 # Animation d'un deplacement, en millisecondes.
 DUREE_MOUVEMENT = 140    # le chat (et la caisse poussee) glisse d'une case a la suivante
-DELAI_REPETITION = 250   # touche flechee maintenue : le chat continue tout seul apres ce temps
 
 # Durees des phases de fin de niveau, en millisecondes.
 DUREE_OUVERTURE = 1200   # la porte s'ouvre, la lumiere apparait
@@ -52,7 +51,7 @@ COULEUR_TRAJET = (90, 210, 255)
 
 # Effets du decor vivant.
 NOMBRE_LUCIOLES = 18
-DUREE_PARTICULE = 700    # duree de vie d'une etincelle ou d'un nuage de poussiere, en millisecondes
+DUREE_PARTICULE = 700    # duree de vie d'une etincelle ou d'un grain de poussiere, en millisecondes
 
 
 def touche_le_sol(grille, r, c):
@@ -78,18 +77,6 @@ def creer_halo(rayon, couleur, opacite):
     return image
 
 
-def creer_vignette(largeur, hauteur):
-    # Bords de l'image un peu assombris (comme une photo) : on calcule une petite image de 40 x 40
-    # pixel par pixel, puis on l'agrandit en douceur a la taille de la zone de jeu.
-    petite = pygame.Surface((40, 40), pygame.SRCALPHA)
-    for x in range(40):
-        for y in range(40):
-            distance = math.hypot((x - 19.5) / 19.5, (y - 19.5) / 19.5)    # 0 au centre, 1 au bord
-            force = max(0.0, (distance - 0.65) / 0.75)
-            petite.set_at((x, y), (10, 15, 5, int(min(1.0, force) ** 2 * 150)))
-    return pygame.transform.smoothscale(petite, (largeur, hauteur))
-
-
 class Game:
 
     def __init__(self, numero=0, menu=True):
@@ -98,6 +85,9 @@ class Game:
         # Son en mono, 22050 echantillons par seconde : suffisant, et les sons se calculent plus vite.
         pygame.mixer.pre_init(22050, -16, 1, 512)
         pygame.init()
+        # Fleche gardee appuyee : pygame renvoie la touche toute seule apres 250 ms, puis toutes les 140 ms
+        # (le temps d'un pas), donc le chat continue d'avancer.
+        pygame.key.set_repeat(250, DUREE_MOUVEMENT)
 
         # La zone de jeu a toujours la meme taille : celle du plus grand niveau + la marge.
         # Les niveaux plus petits sont centres dedans.
@@ -121,8 +111,6 @@ class Game:
         pygame.draw.ellipse(self.image_ombre, (0, 0, 0, 70), (0, 0, 60, 20))
 
         # Effets du decor vivant (images preparees une seule fois).
-        self.vignette = creer_vignette(largeur, hauteur)
-        self.nuage = pygame.transform.smoothscale(creer_halo(100, (20, 30, 10), 85), (360, 200))
         self.lueur = creer_halo(10, (255, 240, 140), 200)
         self.halo_cible = creer_halo(TAILLE, (255, 220, 90), 150)
         # Lucioles : position de depart, vitesse et decalage au hasard (graine fixe : toujours pareil).
@@ -201,8 +189,6 @@ class Game:
         self.anim_direction = (0, 0)
         self.regarde_gauche = False     # le chat est dessine tourne vers la gauche
         self.action_en_attente = None   # touche appuyee pendant une animation : jouee juste apres
-        self.touche_tenue = None        # fleche gardee appuyee (le chat continue d'avancer)
-        self.moment_appui = 0
         self.annuler_solution()
         pygame.display.set_caption("Sokoban - Niveau " + str(numero + 1))
 
@@ -273,15 +259,10 @@ class Game:
                 if evenement.key in TOUCHES and self.phase == "jeu":
                     # Jouer a la main arrete la solution automatique (la position change).
                     self.annuler_solution()
-                    self.touche_tenue = evenement.key
-                    self.moment_appui = pygame.time.get_ticks()
                     if self.en_mouvement():
                         self.action_en_attente = TOUCHES[evenement.key]   # joue des que le pas en cours finit
                     else:
                         self.bouger(TOUCHES[evenement.key])
-            elif evenement.type == pygame.KEYUP:
-                if evenement.key == self.touche_tenue:
-                    self.touche_tenue = None
             elif evenement.type == pygame.MOUSEBUTTONDOWN and evenement.button == 1:
                 if self.bouton_recommencer.collidepoint(evenement.pos):
                     self.charger_niveau(self.numero)
@@ -366,9 +347,9 @@ class Game:
                     caisse = (arrivee[0] + dr, arrivee[1] + dc)
                     self.anim_caisse = (arrivee, caisse)
                     # Un peu de poussiere derriere la caisse poussee, et des etincelles si elle arrive sur une cible.
-                    self.ajouter_particules(arrivee, 5, (200, 190, 160), 40)
+                    self.ajouter_particules(arrivee, 5, (200, 190, 160), 60)
                     if suivant.grid[caisse[0]][caisse[1]] == "*":
-                        self.ajouter_particules(caisse, 16, (255, 220, 90), 110)
+                        self.ajouter_particules(caisse, 16, (255, 220, 90), 180)
                 if self.son_actif and "pas" in self.sons:
                     self.sons["pas"].play()
                 return
@@ -384,7 +365,7 @@ class Game:
         for k in range(nombre):
             angle = 2 * math.pi * k / nombre + random.uniform(-0.3, 0.3)
             v = vitesse * random.uniform(0.5, 1.0)
-            self.particules.append([x + TAILLE // 2, y + TAILLE // 2, math.cos(angle) * v, math.sin(angle) * v, maintenant, couleur])
+            self.particules.append((x + TAILLE // 2, y + TAILLE // 2, math.cos(angle) * v, math.sin(angle) * v, maintenant, couleur))
 
     def annuler_coup(self):
         # Revient a l'etat d'avant le dernier coup (touche Z).
@@ -435,10 +416,6 @@ class Game:
                 # Touche appuyee pendant le pas precedent.
                 self.bouger(self.action_en_attente)
                 self.action_en_attente = None
-            elif self.touche_tenue is not None and pygame.key.get_pressed()[self.touche_tenue]:
-                # Fleche gardee appuyee : le chat continue d'avancer.
-                if pygame.time.get_ticks() - self.moment_appui >= DELAI_REPETITION:
-                    self.bouger(TOUCHES[self.touche_tenue])
             elif self.auto and pygame.time.get_ticks() - self.dernier_pas >= DELAI_PAS:
                 # Lecture automatique de la solution : un pas toutes les DELAI_PAS millisecondes.
                 if self.pas_auto < len(self.solution):
@@ -503,15 +480,19 @@ class Game:
         # La porte de sortie est posee sur un mur visible du haut du niveau, avec du sol juste en dessous
         # (de preference au milieu). Retourne (ligne, colonne) ou None. C'est seulement un dessin :
         # la case reste un mur, les regles du jeu ne changent pas.
+        # On parcourt les lignes de haut en bas ; dans la premiere ligne qui a une place possible,
+        # on garde celle qui est la plus proche du milieu.
         grille = self.etat.grid
         milieu = len(grille[0]) // 2
         meilleure = None
         for r in range(len(grille) - 1):
             for c in range(len(grille[r])):
                 if grille[r][c] == "O" and touche_le_sol(grille, r, c) and grille[r + 1][c] != "O":
-                    if meilleure is None or r < meilleure[0] or (r == meilleure[0] and abs(c - milieu) < abs(meilleure[1] - milieu)):
+                    if meilleure is None or abs(c - milieu) < abs(meilleure[1] - milieu):
                         meilleure = (r, c)
-        return meilleure
+            if meilleure is not None:
+                return meilleure
+        return None
 
     def case_libre(self, wr, wc):
         # Vrai si la case (wr, wc) de la zone de jeu est de l'herbe visible : hors du niveau, ou case de mur
@@ -525,19 +506,15 @@ class Game:
 
     def dessiner_cible(self, x, y, allumee):
         # La cible est une plaque de pierre carree avec un contour dore (dessinee avec pygame.draw,
-        # il n'y a pas de sprite pour ca dans le pack). Le contour "respire" doucement ;
-        # quand une caisse est dessus, il brille et un halo dore deborde autour de la caisse.
+        # il n'y a pas de sprite pour ca dans le pack). Quand une caisse est dessus, le contour
+        # brille et un halo dore deborde autour de la caisse.
         plaque = pygame.Rect(x + 4, y + 4, TAILLE - 8, TAILLE - 8)
         pygame.draw.rect(self.monde, COULEUR_PLAQUE, plaque, 0, 6)
         if allumee:
-            self.monde.blit(self.halo_cible, (x + TAILLE // 2 - self.halo_cible.get_width() // 2, y + TAILLE // 2 - self.halo_cible.get_height() // 2))
+            self.monde.blit(self.halo_cible, (x + TAILLE // 2 - TAILLE, y + TAILLE // 2 - TAILLE))
             pygame.draw.rect(self.monde, COULEUR_CONTOUR_ALLUME, plaque, 4, 6)
         else:
-            p = (math.sin(pygame.time.get_ticks() / 400.0) + 1) / 2     # entre 0 et 1, va et vient
-            couleur = []
-            for k in range(3):
-                couleur.append(int(COULEUR_CONTOUR[k] + (COULEUR_CONTOUR_ALLUME[k] - COULEUR_CONTOUR[k]) * p * 0.6))
-            pygame.draw.rect(self.monde, couleur, plaque, 4, 6)
+            pygame.draw.rect(self.monde, COULEUR_CONTOUR, plaque, 4, 6)
 
     def dessiner_haie(self):
         # Rangee de buissons sur tout le bord de la zone de jeu (il en manque un de temps en temps).
@@ -746,29 +723,19 @@ class Game:
         self.dessiner_effets()
 
     def dessiner_effets(self):
-        # Ce qui rend le decor vivant : etincelles et poussiere, ombres des nuages qui passent, lucioles.
+        # Ce qui rend le decor vivant : etincelles et poussiere, lucioles.
         maintenant = pygame.time.get_ticks()
 
-        # Particules : elles avancent, ralentissent et rapetissent jusqu'a disparaitre.
+        # Particules : elles partent en ligne droite et rapetissent jusqu'a disparaitre.
         restantes = []
-        for particule in self.particules:
-            age = (maintenant - particule[4]) / float(DUREE_PARTICULE)
+        for (x, y, vx, vy, naissance, couleur) in self.particules:
+            age = (maintenant - naissance) / float(DUREE_PARTICULE)     # 0 a la naissance, 1 a la fin
             if age < 1:
-                restantes.append(particule)
-                distance = (1 - (1 - age) * (1 - age)) * DUREE_PARTICULE / 1000.0     # ralentit en fin de course
-                x = int(particule[0] + particule[2] * distance)
-                y = int(particule[1] + particule[3] * distance)
+                restantes.append((x, y, vx, vy, naissance, couleur))
+                secondes = (maintenant - naissance) / 1000.0
                 rayon = max(1, int(5 * (1 - age)))
-                pygame.draw.circle(self.monde, particule[5], (x, y), rayon)
+                pygame.draw.circle(self.monde, couleur, (int(x + vx * secondes), int(y + vy * secondes)), rayon)
         self.particules = restantes
-
-        # Trois ombres de nuages qui traversent lentement la scene, de gauche a droite.
-        largeur = self.monde.get_width()
-        for k in range(3):
-            parcours = largeur + self.nuage.get_width()
-            x = (maintenant * (0.012 + 0.004 * k) + k * 330) % parcours - self.nuage.get_width()
-            y = (k * 210 + 60) % self.monde.get_height() - 80
-            self.monde.blit(self.nuage, (int(x), y))
 
         # Lucioles : elles flottent autour de leur place et clignotent doucement.
         for (x0, y0, vitesse, decalage) in self.lucioles:
@@ -929,12 +896,11 @@ class Game:
                     pygame.draw.rect(self.ecran, couleurs[case], (x + c * cote, y + r * cote, cote, cote))
 
     def dessiner_menu(self):
-        # Menu : herbe et haie (avec les nuages et les lucioles), une grande planche avec le titre,
+        # Menu : herbe et haie (avec les lucioles), une grande planche avec le titre,
         # puis une carte par niveau : apercu du niveau, numero et nom.
         self.monde.blit(self.fond_menu, (0, 0))
         self.dessiner_effets()
         self.ecran.blit(self.monde, (0, 0))
-        self.ecran.blit(self.vignette, (0, 0))
 
         largeur = self.monde.get_width()
         lignes = (len(LEVELS) + 1) // 2
@@ -983,10 +949,8 @@ class Game:
         # Barre d'infos en bas : niveau et coups, resultat du BFS (ou une astuce), boutons, rappel des touches.
         haut = self.monde.get_height()
         largeur = self.ecran.get_width()
-        # Bois un peu plus sombre en bas qu'en haut, avec un filet dore.
-        for k in range(HAUTEUR_BARRE):
-            sombre = k * 25 // HAUTEUR_BARRE
-            pygame.draw.line(self.ecran, (82 - sombre, 54 - sombre // 2, 30 - sombre // 3), (0, haut + k), (largeur, haut + k))
+        # Fond en bois sombre, avec un filet dore en haut.
+        pygame.draw.rect(self.ecran, (72, 47, 26), (0, haut, largeur, HAUTEUR_BARRE))
         pygame.draw.line(self.ecran, (230, 200, 130), (0, haut), (largeur, haut), 3)
         pygame.draw.line(self.ecran, (120, 80, 40), (0, haut + 3), (largeur, haut + 3), 2)
 
@@ -1028,7 +992,6 @@ class Game:
         else:
             self.dessiner_niveau()
             self.ecran.blit(self.monde, (0, 0))
-        self.ecran.blit(self.vignette, (0, 0))
 
         if self.phase in PHASES_PORTE_OUVERTE:
             # La lumiere reste allumee depuis le moment de la victoire.
