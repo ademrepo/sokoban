@@ -1,5 +1,6 @@
 # Point d'entree du programme.
-# Usage : python main.py           -> lance l'interface graphique (Pygame, etapes 6 a 9)
+# Usage : python main.py           -> lance l'interface graphique (Pygame)
+#         python main.py --niveau N -> affiche le niveau numero N (1 a 8)
 #         python main.py --console -> mode console : BFS sur tous les niveaux
 
 import sys
@@ -8,6 +9,7 @@ import time
 from levels import LEVELS
 from sokoban import SokobanPuzzle
 from search import BFS
+from gui import Game
 
 
 def resoudre_niveau(niveau):
@@ -39,7 +41,12 @@ def main():
     if "--console" in sys.argv:
         mode_console()
     else:
-        print("L'interface graphique sera ajoutee aux etapes 6 a 9. Utiliser --console pour l'instant.")
+        # Option : python main.py --niveau 3 affiche le niveau numero 3 (1 = Exemple 1).
+        numero = 0
+        if "--niveau" in sys.argv:
+            numero = int(sys.argv[sys.argv.index("--niveau") + 1]) - 1
+        jeu = Game(numero)
+        jeu.run()
 
 
 if __name__ == "__main__":
