@@ -14,9 +14,9 @@ from gui import Game
 
 def resoudre_niveau(niveau):
     # Lance le BFS sur un niveau et retourne (noeud but ou None, temps en secondes).
-    etatInitial = SokobanPuzzle(niveau["grid"])
+    etat_initial = SokobanPuzzle(niveau["grid"])
     debut = time.time()
-    noeud = BFS(etatInitial, lambda st: st.successorFunction(), lambda st: st.isGoal())
+    noeud = BFS(etat_initial, lambda st: st.successorFunction(), lambda st: st.isGoal())
     duree = time.time() - debut
     return noeud, duree
 

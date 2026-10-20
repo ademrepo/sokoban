@@ -229,7 +229,7 @@ class Game:
             self.resultat = "BFS : aucune solution depuis cette position"
         else:
             self.solution = noeud.getSolution()
-            self.trajectoire = [etat.playerPos for etat in noeud.getPath()]
+            self.trajectoire = [etat.player_pos for etat in noeud.getPath()]
             self.auto = True
             self.dernier_pas = pygame.time.get_ticks()
             self.resultat = "BFS : cout " + str(noeud.g) + " | " + str(len(self.solution)) + " pas | " + "%.3f" % duree + " s"
@@ -283,7 +283,7 @@ class Game:
         # C'est un petit parcours en largeur sur les cases, pour l'animation seulement : ce n'est
         # pas un coup du jeu, donc ni les coups ni le cout du BFS ne changent.
         grille = self.etat.grid
-        depart = self.etat.playerPos
+        depart = self.etat.player_pos
         if self.porte is None:
             return [depart]
         arrivee = (self.porte[0] + 1, self.porte[1])
