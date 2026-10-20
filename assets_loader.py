@@ -125,7 +125,7 @@ def load_sprites(taille):
         x, y, largeur, hauteur = touffes[k]
         sprites["touffe" + str(k)] = decouper_hauteur(plantes_sans_ombre, x, y, largeur, hauteur, hauteur * 2)
     # Decor garde : totem, tonneau, tombe, caisses de decor, et la porte de sortie.
-    # (rectangles lus avec voir_assets.py, hauteur voulue ensuite ; les proportions sont gardees)
+    # (rectangles trouves en regardant les feuilles, hauteur voulue ensuite ; les proportions sont gardees)
     sprites["totem"] = decouper_hauteur(props_ombres, 348, 170, 44, 90, taille * 2)
     sprites["tonneau"] = decouper_hauteur(props_ombres, 160, 150, 36, 42, taille)
     sprites["tombe"] = decouper_hauteur(props_ombres, 222, 236, 40, 48, taille)
@@ -142,7 +142,7 @@ def load_sprites(taille):
 
 
 # ---------------------------------------------------------------------------------------------
-# Sons (etape 13, facultative) : ils sont calcules par le code, echantillon par echantillon,
+# Sons : ils sont calcules par le code, echantillon par echantillon,
 # il n'y a aucun fichier audio. Un echantillon = un nombre entre -32767 et 32767.
 
 

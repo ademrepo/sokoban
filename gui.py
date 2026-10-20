@@ -1,12 +1,12 @@
-# Interface Pygame du jeu.
-# Etape 6  : rendu d'un niveau.
-# Etape 7  : jeu manuel (fleches du clavier), compteur de coups, recommencer.
-# Etape 10 : quand toutes les caisses sont sur les cibles, la porte s'ouvre et s'illumine,
-#            une pancarte "Bravo" glisse dans l'ecran, puis l'ecran glisse vers le niveau suivant.
-# Etape 8  : bouton "Resoudre (BFS)" qui affiche le cout, le nombre de pas et le temps de calcul.
-# Etape 9  : apres le BFS, trajectoire tracee et lecture automatique de la solution.
-# Etape 11 : menu de choix du niveau (au lancement, ou touche M / bouton "Menu").
-# Etape 13 : sons crees par le code (ambiance de prairie, bruit de pas), touche S pour couper.
+# Interface Pygame du jeu (classe Game).
+# - menu de choix du niveau (au lancement, ou touche M / bouton "Menu") ;
+# - rendu d'un niveau avec les sprites du pack ;
+# - jeu manuel (fleches du clavier), compteur de coups, recommencer ;
+# - bouton "Resoudre (BFS)" : cout, nombre de pas et temps de calcul, puis trajectoire tracee
+#   et lecture automatique de la solution ;
+# - fin de niveau : la porte s'ouvre et s'illumine, le chat va devant la porte et remue la queue,
+#   une pancarte "Bravo" descend, puis l'ecran glisse vers le niveau suivant ;
+# - sons crees par le code (ambiance de prairie, bruit de pas), touche S pour couper.
 
 import math
 import time
@@ -23,8 +23,8 @@ MARGE = 2              # marge autour du plus grand niveau, en nombre de cases (
 HAUTEUR_BARRE = 112    # hauteur de la barre d'infos en bas de la fenetre, en pixels
 # Couleurs de la cible : plaque de pierre avec un contour dore (plus brillant quand une caisse est dessus).
 COULEUR_PLAQUE = (120, 115, 105)
-COULEUR_RUNE = (205, 150, 50)
-COULEUR_RUNE_ALLUMEE = (255, 230, 110)
+COULEUR_CONTOUR = (205, 150, 50)
+COULEUR_CONTOUR_ALLUME = (255, 230, 110)
 COULEUR_BON = (80, 210, 100)       # contour vert d'une caisse bien placee
 
 # Touche du clavier -> nom de l'action de successorFunction.
@@ -351,9 +351,9 @@ class Game:
         # il n'y a pas de sprite pour ca dans le pack). Le contour brille quand une caisse est dessus.
         plaque = pygame.Rect(x + 4, y + 4, TAILLE - 8, TAILLE - 8)
         pygame.draw.rect(self.monde, COULEUR_PLAQUE, plaque, 0, 6)
-        couleur = COULEUR_RUNE
+        couleur = COULEUR_CONTOUR
         if allumee:
-            couleur = COULEUR_RUNE_ALLUMEE
+            couleur = COULEUR_CONTOUR_ALLUME
         pygame.draw.rect(self.monde, couleur, plaque, 4, 6)
 
     def dessiner_haie(self):

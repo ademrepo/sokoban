@@ -18,9 +18,10 @@ Avant de coder quoi que ce soit, lire dans cet ordre :
 
 Voir `docs/PLAN.md` pour la liste à jour. En résumé à ce stade :
 
-- Fait : niveaux, état et règles (`SokobanPuzzle`), `Node`, `BFS`, mode console, et l'interface
-  Pygame (jeu à la main, bouton « Résoudre (BFS) », simulation de la solution, fin de niveau animée).
-- Reste : voir la ligne « Prochaine étape » de `docs/PLAN.md`.
+- Le jeu est complet : niveaux, état et règles (`SokobanPuzzle`), `Node`, `BFS`, mode console, et
+  l'interface Pygame (menu, jeu à la main, bouton « Résoudre (BFS) », simulation de la solution,
+  fin de niveau animée, sons).
+- Les explications du code pour la soutenance sont dans `docs/EXPLICATIONS.md`.
 
 ## Prérequis
 
@@ -28,11 +29,14 @@ Voir `docs/PLAN.md` pour la liste à jour. En résumé à ce stade :
 - `pygame-ce` (compatible avec `pygame`, y compris sur les versions récentes de Python) :
   `pip install pygame-ce`
 
-## Lancer le jeu (une fois les étapes GUI faites)
+## Lancer le jeu
 
 ```
 python main.py
 ```
+
+Le jeu s'ouvre sur le menu de choix du niveau. Toutes les touches sont dans `docs/COMMANDES.md`.
+Ouvrir directement un niveau : `python main.py --niveau 3`.
 
 Mode console (sans interface graphique) :
 
@@ -52,6 +56,10 @@ python test_core.py
 - `node.py` — noeud de l'arbre de recherche (`Node`)
 - `search.py` — algorithme `BFS`
 - `levels.py` — les niveaux
-- `gui.py`, `assets_loader.py`, `main.py` — interface Pygame
+- `gui.py` — interface Pygame (classe `Game`)
+- `assets_loader.py` — découpe des sprites et sons créés par le code
+- `main.py` — point d'entrée (`python main.py`, `--niveau N`, `--console`)
 - `test_core.py` — tests (`assert`, pas de pytest)
-- `docs/` — spécification complète (`SPEC.md`), suivi (`PLAN.md`), journal de sessions (`logs/`)
+- `assets/` — pack d'images « Pixel Art Top Down - Basic » (Cainos, itch.io)
+- `docs/` — spécification (`SPEC.md`), suivi (`PLAN.md`), journal de sessions (`logs/`),
+  commandes (`COMMANDES.md`), explications (`EXPLICATIONS.md`)

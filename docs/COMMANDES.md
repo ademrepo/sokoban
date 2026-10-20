@@ -56,22 +56,8 @@ python test_core.py
 ```
 Doit afficher « Tous les tests sont passes. »
 
-## Voir les assets (images du pack) et choisir ceux qu'on veut
-Outil temporaire : `voir_assets.py` (à la racine du projet, après un `git pull`). Il sert seulement à choisir des images du pack et **sera supprimé à l'étape 15** (nettoyage). Les choix sont enregistrés dans `choix_assets.txt`, qui reste sur l'ordinateur (il n'est pas poussé) : l'envoyer à la personne qui modifie `assets_loader.py`.
-```
-python voir_assets.py
-```
-| Touche / souris | Effet |
-|---|---|
-| Clic sur un objet | Le sélectionne (son rectangle s'affiche en bas) |
-| Entrée | Enregistre l'objet choisi dans `choix_assets.txt` |
-| N / P | Feuille suivante / précédente |
-| Molette ou flèches | Faire défiler (Maj + molette : sur le côté) |
-| Z | Zoom x1 / x2 |
-| C | Catalogue des sprites déjà utilisés par le jeu |
-| Échap | Quitter |
-
-Les feuilles sont dans `assets/Pixel Art Top Down - Basic v1.2.3/Texture/`. Les rectangles de découpe sont dans `assets_loader.py`.
+## Images du jeu
+Les feuilles de sprites sont dans `assets/Pixel Art Top Down - Basic v1.2.3/Texture/`. Les rectangles de découpe sont dans `assets_loader.py`. (L'outil temporaire `voir_assets.py` qui servait à les choisir a été supprimé à l'étape 15 ; il reste dans l'historique git, commit `ff5818f`.)
 
 ## Git (rappel)
 ```
