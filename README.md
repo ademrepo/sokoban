@@ -18,10 +18,9 @@ Avant de coder quoi que ce soit, lire dans cet ordre :
 
 Voir `docs/PLAN.md` pour la liste à jour. En résumé à ce stade :
 
-- Fait : niveaux (`levels.py`), état du jeu et règles (`sokoban.py`, testé dans `test_core.py`).
-- Pas encore fait : `Node` (`node.py`), `BFS` (`search.py`), et toute l'interface Pygame
-  (`gui.py`, `assets_loader.py`, `main.py` ne sont que des stubs vides pour l'instant).
-  `python main.py` ne fait donc rien d'utile tant que ces étapes ne sont pas faites.
+- Fait : niveaux, état et règles (`SokobanPuzzle`), `Node`, `BFS`, mode console, et l'interface
+  Pygame (jeu à la main, bouton « Résoudre (BFS) », simulation de la solution, fin de niveau animée).
+- Reste : voir la ligne « Prochaine étape » de `docs/PLAN.md`.
 
 ## Prérequis
 

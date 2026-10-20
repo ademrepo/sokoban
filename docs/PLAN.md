@@ -20,6 +20,20 @@ Une étape par tour de travail. Cocher, dater et indiquer le log au fur et à me
 - [ ] Étape 15 — Nettoyage : enlever tout ce qui est inutile (sprites, fonctions, imports, constantes et commentaires obsolètes, `voir_assets.py`, README à jour), avant les explications
 - [ ] Étape 16 — Explications (`docs/EXPLICATIONS.md`)
 
+Correspondance avec les anciens numéros (avant la renumérotation du 2026-10-20, commit `4dc4589`) :
+
+| Nouveau | Ancien | Contenu |
+|---|---|---|
+| 0 à 9 | 0 à 9 | inchangés |
+| 10 | 7c + 7d | fin de niveau (porte, lumière, chat, Bravo, slide) et cibles en plaques |
+| 11 | 7b | menu de choix du niveau |
+| 12 | 6b + 6c | retouches du rendu, puis du look niveau par niveau |
+| 13 | 9b | sons (facultatif) |
+| 14 | 10 | relecture finale |
+| 15 | 10b | nettoyage |
+| 16 | 11 | explications |
+
+Hors plan : commit `c3de3e1` (décor identique dans tous les niveaux, « Niveau N », fenêtre plus petite) = début de l'étape 12, documenté après coup dans docs/logs/2026-10-20_session-15.md.
 
 ## Prochaine étape
 Étape 11 — GUI : menu de choix du niveau. Ensuite : 12 (retouches du look), 13 (sons, facultatif), 14 (relecture), 15 (nettoyage), 16 (explications). Test : `python main.py`, voir `docs/COMMANDES.md` et `docs/SPEC.md`.
