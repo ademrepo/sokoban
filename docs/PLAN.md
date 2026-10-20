@@ -35,6 +35,7 @@ Correction d'après les notes du cours (demandée par ademrepo le 2026-10-20) :
 - [x] Étape 24 — Relecture de tout le code : enlever les doublons et les lignes en trop, garder un code simple « d'étudiant » — 2026-10-20 — docs/logs/2026-10-20_session-31.md
 - [x] Étape 25 — Simplification : retirer ce qui est difficile à expliquer à l'oral (vignette, nuages, gestion manuelle de la touche maintenue, oiseaux...) — 2026-10-20 — docs/logs/2026-10-20_session-32.md
 - [x] Étape 26 — Règles de programmation : position du joueur donnée aux successeurs (pas de nouvelle recherche), test le moins cher d'abord ; liste des règles respectées dans EXPLICATIONS — 2026-10-20 — docs/logs/2026-10-20_session-33.md
+- [x] Étape 27 — Explications : questions probables sur SokobanPuzzle (génération des niveaux, init, isGoal, successorFunction) et Node ajoutées à `docs/EXPLICATIONS.md` — 2026-10-20 — docs/logs/2026-10-20_session-34.md
 
 Correspondance avec les anciens numéros (avant la renumérotation du 2026-10-20, commit `4dc4589`) :
 
@@ -52,4 +53,4 @@ Correspondance avec les anciens numéros (avant la renumérotation du 2026-10-20
 Hors plan : commit `c3de3e1` (décor identique dans tous les niveaux, « Niveau N », fenêtre plus petite) = début de l'étape 12, documenté après coup dans docs/logs/2026-10-20_session-15.md.
 
 ## Prochaine étape
-Étapes 0 à 26 faites. La branche `adem` (UI/UX, steps du BFS, relectures) est fusionnée dans `main` le 2026-10-20 (commit de fusion « Fusion de la branche adem : UI/UX... »). Ensuite, relire `docs/EXPLICATIONS.md` pour la soutenance. Test : `python main.py`, voir `docs/COMMANDES.md` et `docs/SPEC.md`.
+Étapes 0 à 27 faites. La branche `adem` (UI/UX, steps du BFS, relectures) est fusionnée dans `main` le 2026-10-20 (commit de fusion « Fusion de la branche adem : UI/UX... »). Ensuite, relire `docs/EXPLICATIONS.md` pour la soutenance. Test : `python main.py`, voir `docs/COMMANDES.md` et `docs/SPEC.md`.

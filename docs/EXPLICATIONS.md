@@ -282,3 +282,37 @@ L'énoncé ne le demande pas. Le BFS finit quand même : il explore ces états p
 
 **Où sont les règles du jeu ?**
 Uniquement dans `successorFunction()`. L'interface, la lecture automatique et le BFS l'utilisent tous les trois.
+
+### Questions sur la classe `SokobanPuzzle`
+
+**Comment les niveaux sont-ils générés ?**
+Ils ne sont pas générés au hasard : ils sont écrits à la main dans `levels.py`, sous forme de grilles de texte (les 5 premiers sont recopiés de la Figure 4 de l'énoncé). `SokobanPuzzle(grille)` transforme une grille en état. Ce qui est « généré » par le programme, ce sont les états suivants : `successorFunction()` fabrique les enfants d'un état, et le BFS les assemble en arbre.
+
+**À quoi sert `__init__` ?**
+À créer un état : il range la grille dans `self.grid` (en tuple, donc non modifiable et hashable) et la position du joueur dans `self.player_pos`. Pour le niveau de départ, il cherche le joueur dans la grille (`trouver_joueur`). Pour un successeur, la position est donnée directement (on vient de déplacer le joueur, donc on la connaît : pas besoin de re-chercher).
+
+**À quoi sert `isGoal()` ?**
+À dire si l'état est un but : vrai quand il ne reste aucune caisse `B` hors cible. Le BFS l'appelle sur chaque nouvel enfant.
+
+**Que renvoie `successorFunction()` ?**
+Une liste de paires `(action, successeur)`, une par coup légal parmi UP, DOWN, LEFT, RIGHT. Un coup est légal si la case visée est libre, ou si elle contient une caisse et que la case derrière est libre. Chaque successeur est un nouveau `SokobanPuzzle` : l'état de départ n'est jamais modifié.
+
+**Pourquoi `__eq__` et `__hash__` ?**
+Le BFS doit savoir si un état a déjà été vu. Deux états sont les mêmes si leurs grilles sont identiques, et `__hash__` permet de les mettre dans un `set`.
+
+### Questions sur la classe `Node`
+
+**Que contient un nœud ?**
+Exactement ce que demande l'énoncé : `state` (un `SokobanPuzzle`), `parent` (le nœud d'où l'on vient), `action` (le coup qui a mené ici) et `g` (le coût du chemin).
+
+**Comment est calculé `g` ?**
+`g = g du père + 1`, car chaque coup coûte 1. La racine a `g = 0`.
+
+**Comment marchent `getPath()` et `getSolution()` ?**
+Les deux remontent de nœud en nœud avec `parent` jusqu'à la racine, puis inversent la liste. `getPath()` collecte les états, `getSolution()` collecte les actions (la racine n'en a pas).
+
+**Différence entre état et nœud ?**
+L'état est la photo du jeu (la grille). Le nœud est un point de l'arbre de recherche : il enveloppe un état et se souvient de son père, de l'action et du coût. Deux nœuds différents peuvent contenir le même état.
+
+**Rôle de chaque fichier ?**
+`sokoban.py` = l'état et les règles. `node.py` = le nœud. `search.py` = le BFS. `levels.py` = les grilles. `gui.py` = l'interface Pygame, qui réutilise `successorFunction()`. `main.py` = le point d'entrée.
