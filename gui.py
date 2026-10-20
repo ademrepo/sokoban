@@ -375,21 +375,31 @@ class Game:
                     if numero == 29:
                         self.poser("caisse_petite", wr, wc)
 
-        # Trois tombes alignees en bas a gauche.
-        bas = self.cases_hauteur - 2
-        for k in range(3):
-            self.poser("tombe", bas, 2 + k)
+        # Les tombes et les tonneaux sont poses juste sous le niveau (et pas dans les coins de la fenetre),
+        # pour que les petits niveaux ne soient pas perdus au milieu de l'herbe.
+        grille = self.etat.grid
+        bas = min(self.decalage_ligne + len(grille), self.cases_hauteur - 2)
+        gauche = self.decalage_colonne
+        droite = self.decalage_colonne + len(grille[0]) - 1
 
-        # Trois tonneaux groupes dans le coin en bas a droite.
-        self.poser("tonneau", bas, self.cases_largeur - 3)
-        self.poser("tonneau", bas, self.cases_largeur - 4)
-        self.poser("tonneau", bas - 1, self.cases_largeur - 3)
+        # Trois tombes alignees sous le coin bas gauche du niveau.
+        for k in range(3):
+            self.poser("tombe", bas, gauche + k)
+
+        # Trois tonneaux groupes sous le coin bas droit du niveau.
+        self.poser("tonneau", bas, droite)
+        self.poser("tonneau", bas, droite - 1)
+        self.poser("tonneau", bas - 1, droite + 1)
 
         # Deux totems poses sur le mur du haut, de chaque cote de la porte (jamais dans le vide).
+        # On essaie a 3 cases de la porte, sinon a 2 cases (niveaux etroits).
         if self.porte is not None:
-            for ecart in (-3, 3):
-                if self.mur_visible(self.porte[0], self.porte[1] + ecart):
-                    self.poser("totem", self.porte[0] + self.decalage_ligne - 1, self.porte[1] + self.decalage_colonne + ecart)
+            for sens in (-1, 1):
+                for distance in (3, 2):
+                    colonne = self.porte[1] + sens * distance
+                    if self.mur_visible(self.porte[0], colonne):
+                        self.poser("totem", self.porte[0] + self.decalage_ligne - 1, colonne + self.decalage_colonne)
+                        break
 
     def position_porte(self):
         # Coin haut gauche du dessin de la porte (posee sur le bas de sa case de mur) et son sprite.
