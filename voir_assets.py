@@ -1,4 +1,4 @@
-# OUTIL TEMPORAIRE : ce fichier sera SUPPRIME du projet a l'etape 10b (nettoyage), avant le rendu.
+# OUTIL TEMPORAIRE : ce fichier sera SUPPRIME du projet a l'etape 15 (nettoyage), avant le rendu.
 #
 # A quoi il sert : parcourir toutes les images (assets) du pack "Pixel Art Top Down - Basic" pour choisir
 # celles qu'on veut dans le jeu. Il ne fait pas partie du jeu et n'est pas demande par l'enonce.

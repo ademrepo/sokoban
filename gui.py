@@ -1,10 +1,11 @@
 # Interface Pygame du jeu.
 # Etape 6  : rendu d'un niveau.
 # Etape 7  : jeu manuel (fleches du clavier), compteur de coups, recommencer.
-# Etape 7c : quand toutes les caisses sont sur les cibles, la porte s'ouvre et s'illumine,
+# Etape 10 : quand toutes les caisses sont sur les cibles, la porte s'ouvre et s'illumine,
 #            une pancarte "Bravo" glisse dans l'ecran, puis l'ecran glisse vers le niveau suivant.
 # Etape 8  : bouton "Resoudre (BFS)" qui affiche le cout, le nombre de pas et le temps de calcul.
-# Les etapes 9 (simulation de la solution) et 7b (menu) viendront ensuite.
+# Etape 9  : apres le BFS, trajectoire tracee et lecture automatique de la solution.
+# Les etapes suivantes (11 : menu de choix du niveau) viendront ensuite.
 
 import math
 import time

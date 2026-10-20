@@ -8,16 +8,18 @@ Une étape par tour de travail. Cocher, dater et indiquer le log au fur et à me
 - [x] Étape 3 — Node (`node.py`) + tests — 2026-10-20 — docs/logs/2026-10-20_session-04.md
 - [x] Étape 4 — BFS (`search.py`) + tests — 2026-10-20 — docs/logs/2026-10-20_session-05.md
 - [x] Étape 5 — Validation du cœur (BFS sur tous les niveaux, `main.py --console`) — 2026-10-20 — docs/logs/2026-10-20_session-06.md
-- [x] Étape 6 — GUI : rendu statique — 2026-10-20 — docs/logs/2026-10-20_session-07.md
-- [x] Étape 7c — GUI : fin de niveau : la porte du mur s'ouvre avec une lumière quand toutes les caisses sont sur les cibles (`isGoal`), pancarte « Bravo » en bois qui glisse, puis slide vers le niveau suivant — 2026-10-20 — docs/logs/2026-10-20_session-10.md (ajout demandé par l'équipe ; ne peut être essayée à la main qu'après l'étape 7)
-- [x] Étape 7 — GUI : jeu manuel — 2026-10-20 — docs/logs/2026-10-20_session-11.md
+- [x] Étape 6 — GUI : rendu statique d'un niveau — 2026-10-20 — docs/logs/2026-10-20_session-07.md
+- [x] Étape 7 — GUI : jeu manuel (flèches, compteur de coups, recommencer) — 2026-10-20 — docs/logs/2026-10-20_session-11.md
 - [x] Étape 8 — GUI : résolution par BFS (bouton « Résoudre (BFS) » : coût, nombre de pas, temps) — 2026-10-20 — docs/logs/2026-10-20_session-11.md
 - [x] Étape 9 — GUI : simulation de la solution (trajectoire tracée + lecture automatique) — 2026-10-20 — docs/logs/2026-10-20_session-12.md
-- [x] Étape 7d — GUI : cibles en plaques de pierre à contour doré (le contour brille quand une caisse est dessus), chat plus joli, et en fin de niveau le chat marche jusqu'à la porte et remue la queue avant le slide (animation : ne compte ni dans les coups ni dans le coût du BFS) — 2026-10-20 — docs/logs/2026-10-20_session-14.md (ajout demandé par l'équipe)
-- [ ] Étape 7b — GUI : menu de choix du niveau (ajout demandé par l'équipe)
-- [ ] Étape 9b — En plus (facultatif) : sons créés par le code, sans fichier ajouté : ambiance de prairie (vent dans l'herbe) en continu et bruit de pas quand on bouge avec les flèches (ajout demandé par l'équipe ; à faire seulement s'il reste du temps)
-- [ ] Étape 6b — GUI : retouches du rendu après le jeu fonctionnel (décor, assets, personnage) (ajout demandé par l'équipe)
-- [ ] Étape 6c — GUI : ajuster le look de chaque niveau, niveau par niveau (décor, positions) (ajout demandé par l'équipe)
-- [ ] Étape 10 — Relecture finale
-- [ ] Étape 10b — Nettoyage : enlever tout ce qui est inutile (sprites, fonctions, imports, constantes et commentaires obsolètes, `voir_assets.py`, README à jour), avant les explications (ajout demandé par l'équipe)
-- [ ] Étape 11 — Explications (`docs/EXPLICATIONS.md`)
+- [x] Étape 10 — GUI : fin de niveau (porte et lumière, chat qui marche jusqu'à la porte et remue la queue, pancarte « Bravo », slide vers le niveau suivant) et cibles en plaques à contour doré — 2026-10-20 — docs/logs/2026-10-20_session-10.md et docs/logs/2026-10-20_session-14.md
+- [ ] Étape 11 — GUI : menu de choix du niveau
+- [ ] Étape 12 — GUI : retouches du look, niveau par niveau (décor, positions)
+- [ ] Étape 13 — En plus (facultatif) : sons créés par le code, sans fichier ajouté (ambiance de prairie, bruit de pas) ; seulement s'il reste du temps
+- [ ] Étape 14 — Relecture finale
+- [ ] Étape 15 — Nettoyage : enlever tout ce qui est inutile (sprites, fonctions, imports, constantes et commentaires obsolètes, `voir_assets.py`, README à jour), avant les explications
+- [ ] Étape 16 — Explications (`docs/EXPLICATIONS.md`)
+
+
+## Prochaine étape
+Étape 11 — GUI : menu de choix du niveau. Ensuite : 12 (retouches du look), 13 (sons, facultatif), 14 (relecture), 15 (nettoyage), 16 (explications). Test : `python main.py`, voir `docs/COMMANDES.md` et `docs/SPEC.md`.

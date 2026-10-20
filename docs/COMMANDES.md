@@ -54,7 +54,7 @@ python test_core.py
 Doit afficher « Tous les tests sont passes. »
 
 ## Voir les assets (images du pack) et choisir ceux qu'on veut
-Outil temporaire : `voir_assets.py` (à la racine du projet, après un `git pull`). Il sert seulement à choisir des images du pack et **sera supprimé à l'étape 10b** (nettoyage). Les choix sont enregistrés dans `choix_assets.txt`, qui reste sur l'ordinateur (il n'est pas poussé) : l'envoyer à la personne qui modifie `assets_loader.py`.
+Outil temporaire : `voir_assets.py` (à la racine du projet, après un `git pull`). Il sert seulement à choisir des images du pack et **sera supprimé à l'étape 15** (nettoyage). Les choix sont enregistrés dans `choix_assets.txt`, qui reste sur l'ordinateur (il n'est pas poussé) : l'envoyer à la personne qui modifie `assets_loader.py`.
 ```
 python voir_assets.py
 ```
