@@ -409,9 +409,12 @@ class Game:
         self.poser("tonneau", bas - 1, self.cases_largeur - 3)
 
         # Deux totems poses sur le mur du haut, de chaque cote de la porte (jamais dans le vide).
+        # Seulement s'il y a un mur visible des DEUX cotes : sinon on n'en met aucun (pas de totem tout seul).
         if self.porte is not None:
-            for ecart in (-3, 3):
-                if self.mur_visible(self.porte[0], self.porte[1] + ecart):
+            gauche = self.mur_visible(self.porte[0], self.porte[1] - 3)
+            droite = self.mur_visible(self.porte[0], self.porte[1] + 3)
+            if gauche and droite:
+                for ecart in (-3, 3):
                     self.poser("totem", self.porte[0] + self.decalage_ligne - 1, self.porte[1] + self.decalage_colonne + ecart)
 
     def position_porte(self):
