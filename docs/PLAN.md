@@ -37,6 +37,12 @@ Correction d'après les notes du cours (demandée par ademrepo le 2026-10-20) :
 - [x] Étape 26 — Règles de programmation : position du joueur donnée aux successeurs (pas de nouvelle recherche), test le moins cher d'abord ; liste des règles respectées dans EXPLICATIONS — 2026-10-20 — docs/logs/2026-10-20_session-33.md
 - [x] Étape 27 — Explications : questions probables sur SokobanPuzzle (génération des niveaux, init, isGoal, successorFunction) et Node ajoutées à `docs/EXPLICATIONS.md` — 2026-10-20 — docs/logs/2026-10-20_session-34.md
 
+Deuxième sujet : algorithme A* (demandé le 2026-10-24, d'après `Project 1 Part 2.pdf`) :
+
+- [x] Étape 28 — Node : `f` et `setF` ; `astar.py` (A* de la Figure 1.29 + heuristiques h1, h2, h3) ; tests — 2026-10-24 — docs/logs/2026-10-24_session-35.md
+- [x] Étape 29 — Comparaison BFS / A* (`python main.py --compare`), complexité expliquée dans EXPLICATIONS — 2026-10-24 — docs/logs/2026-10-24_session-35.md
+- [ ] Étape 30 — Interface Pygame : choix de l'algorithme (BFS, A* h1, h2, h3), coût et steps de chacun affichés, simulation de la solution
+
 Correspondance avec les anciens numéros (avant la renumérotation du 2026-10-20, commit `4dc4589`) :
 
 | Nouveau | Ancien | Contenu |
@@ -53,4 +59,4 @@ Correspondance avec les anciens numéros (avant la renumérotation du 2026-10-20
 Hors plan : commit `c3de3e1` (décor identique dans tous les niveaux, « Niveau N », fenêtre plus petite) = début de l'étape 12, documenté après coup dans docs/logs/2026-10-20_session-15.md.
 
 ## Prochaine étape
-Étapes 0 à 27 faites. La branche `adem` (UI/UX, steps du BFS, relectures) est fusionnée dans `main` le 2026-10-20 (commit de fusion « Fusion de la branche adem : UI/UX... »). Ensuite, relire `docs/EXPLICATIONS.md` pour la soutenance. Test : `python main.py`, voir `docs/COMMANDES.md` et `docs/SPEC.md`.
+Étapes 0 à 29 faites. Étape 30 : interface Pygame pour A* (voir `docs/SPEC.md` §7 et le log session 35). Test : `python test_core.py`, `python main.py --compare`.

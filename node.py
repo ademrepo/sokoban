@@ -1,5 +1,6 @@
 # Classe Node : brique de base de l'arbre de recherche (voir cours chapitre 1).
-# Contient uniquement state, parent, action, g (le coût g vaut la profondeur car chaque pas coûte 1).
+# Contient state, parent, action, g (le coût g vaut la profondeur car chaque pas coûte 1)
+# et f (la fonction d'évaluation de l'A*, calculée par setF ; le BFS ne s'en sert pas).
 
 
 class Node:
@@ -12,6 +13,11 @@ class Node:
             self.g = 0
         else:
             self.g = parent.g + 1
+        self.f = 0
+
+    def setF(self, h):
+        # Calcule f = g + h(état), où h est la fonction heuristique donnée par l'appelant (A*).
+        self.f = self.g + h(self.state)
 
     def getPath(self):
         # Retourne la liste des états depuis l'état initial jusqu'à ce noeud.

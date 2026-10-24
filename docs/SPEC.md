@@ -234,3 +234,11 @@ Membership tests `child.state not in Closed and not in Open` are O(n) on lists/d
 
 ### 3.8 Python style recap
 Simple functions/classes, camelCase for the statement's method names (`isGoal`, `successorFunction`, `getPath`, `getSolution`), snake_case for everything else, French comments, no type hints, no f-string gymnastics.
+
+## 7. Partie 2 : A* (ajouté le 2026-10-24, demandé par l'utilisateur d'après `Project 1 Part 2.pdf`)
+Le sujet de la partie 2 ajoute à l'énoncé de la partie 1 (les §1 à 6 ci-dessus restent vrais, sauf l'interdiction d'autre algorithme que BFS et d'heuristique, levée pour cette partie) :
+- `Node` : attribut `f` et méthode `setF(h)` (f = g + h(état)). Le BFS n'utilise pas f.
+- `astar.py` : `AStar(s, successorsFn, isGoal, h)` selon la Figure 1.29 du cours (Open = file de priorité ordonnée par f via `heapq`, Closed = dictionnaire ; remplacement dans Open / retrait de Closed quand un meilleur f est trouvé ; test du but à la sortie de Open). Retourne `(noeud but ou None, steps)`, `steps` = noeuds développés, comme le BFS.
+- Heuristiques (dans `astar.py`) : `h1` = nombre de caisses hors cible ; `h2` = 2*h1 + somme des distances de Manhattan caisse → cible libre la plus proche ; `h3` (proposée) = h2 + distance joueur → caisse la plus proche − 1 (chaque déplacement coûte 1, h2 ignore le trajet du joueur).
+- Test : comparer BFS, A* h1, h2, h3 sur les niveaux (`python main.py --compare`).
+- Interface (étape 30, à faire) : afficher coût et steps des différents algorithmes + simulation de la solution.

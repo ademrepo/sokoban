@@ -2,6 +2,7 @@
 # Usage : python main.py           -> lance l'interface graphique (Pygame), en commencant par le menu
 #         python main.py --niveau N -> ouvre directement le niveau numero N (1 a 8)
 #         python main.py --console -> mode console : BFS sur tous les niveaux
+#         python main.py --compare -> mode console : BFS et A* (h1, h2, h3) sur tous les niveaux, tableau de comparaison
 
 import sys
 import time
@@ -9,6 +10,7 @@ import time
 from levels import LEVELS
 from sokoban import SokobanPuzzle
 from search import BFS
+from astar import AStar, h1, h2, h3
 from gui import Game
 
 
@@ -37,8 +39,30 @@ def mode_console():
         print()
 
 
+def mode_comparaison():
+    # Compare BFS et A* (h1, h2, h3) : pour chaque niveau, cout, steps (noeuds developpes) et temps.
+    algos = [("BFS", None), ("A* h1", h1), ("A* h2", h2), ("A* h3", h3)]
+    print("%-10s %-7s %6s %9s %9s" % ("Niveau", "Algo", "Cout", "Steps", "Temps"))
+    for niveau in LEVELS:
+        for nom, h in algos:
+            etat = SokobanPuzzle(niveau["grid"])
+            debut = time.time()
+            if h is None:
+                noeud, steps = BFS(etat, lambda st: st.successorFunction(), lambda st: st.isGoal())
+            else:
+                noeud, steps = AStar(etat, lambda st: st.successorFunction(), lambda st: st.isGoal(), h)
+            duree = time.time() - debut
+            cout = "-"
+            if noeud is not None:
+                cout = noeud.g
+            print("%-10s %-7s %6s %9d %7.3f s" % (niveau["name"], nom, cout, steps, duree))
+        print()
+
+
 def main():
-    if "--console" in sys.argv:
+    if "--compare" in sys.argv:
+        mode_comparaison()
+    elif "--console" in sys.argv:
         mode_console()
     else:
         # Sans option, le jeu commence par le menu de choix du niveau.

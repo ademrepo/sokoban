@@ -4,6 +4,7 @@
 from sokoban import SokobanPuzzle
 from node import Node
 from search import BFS
+from astar import AStar, h1, h2, h3
 from levels import LEVELS
 
 
@@ -182,6 +183,67 @@ def test_bfs_resout_tous_les_niveaux():
         assert courant.isGoal(), niveau["name"]
 
 
+def test_node_f():
+    # f = g + h : la racine a g = 0, un enfant a g = 1.
+    racine = Node(SokobanPuzzle(["OOOOO", "ORBSO", "OOOOO"]))
+    racine.setF(h2)
+    assert racine.f == 0 + h2(racine.state)
+    enfant = Node(racine.state.successorFunction()[0][1], racine, "RIGHT")
+    enfant.setF(h1)
+    assert enfant.f == 1 + h1(enfant.state)
+
+
+def test_heuristiques():
+    # Joueur, une caisse a 1 case de la cible : h1 = 1, h2 = 2*1 + 1 = 3, h3 = h2 + (distance joueur-caisse - 1) = 3.
+    etat = SokobanPuzzle(["OOOOO", "ORBSO", "OOOOO"])
+    assert h1(etat) == 1
+    assert h2(etat) == 3
+    assert h3(etat) == 3
+    # Joueur a 3 cases de la caisse : h3 = h2 + 2.
+    etat = SokobanPuzzle(["OOOOOOO", "ORO BSO", "OOOOOOO"])
+    assert h1(etat) == 1 and h2(etat) == 3 and h3(etat) == 3 + 2
+    # Etat but : les trois heuristiques valent 0.
+    but = SokobanPuzzle(["OOOO", "OR *", "OOOO"])
+    assert h1(but) == 0 and h2(but) == 0 and h3(but) == 0
+
+
+def test_astar_etat_initial_deja_but():
+    noeud, steps = AStar(SokobanPuzzle(["OOOO", "OR *", "OOOO"]), lambda s: s.successorFunction(), lambda s: s.isGoal(), h1)
+    assert noeud.g == 0 and noeud.getSolution() == []
+
+
+def test_astar_sans_solution():
+    # Meme niveau impossible que pour le BFS.
+    for h in (h1, h2, h3):
+        noeud, steps = AStar(SokobanPuzzle(["OOOOO", "OSRBO", "OOOOO"]), lambda s: s.successorFunction(), lambda s: s.isGoal(), h)
+        assert noeud is None
+
+
+def test_astar_resout_tous_les_niveaux():
+    # A* avec chacune des 3 heuristiques trouve le meme cout optimal que le BFS, et la solution rejouee mene au but.
+    # Steps attendus (noeuds developpes) : si ces nombres changent, c'est que A* ou une heuristique a change.
+    couts_optimaux = [4, 35, 36, 30, 28, 2, 5, 10]
+    steps_attendus = {
+        "h1": [11, 1827, 5984, 5475, 10190, 3, 15, 606],
+        "h2": [8, 1400, 3126, 3023, 2980, 3, 12, 131],
+        "h3": [5, 979, 2777, 2577, 2241, 3, 9, 89],
+    }
+    heuristiques = {"h1": h1, "h2": h2, "h3": h3}
+    for nom in heuristiques:
+        for i in range(len(LEVELS)):
+            etat = SokobanPuzzle(LEVELS[i]["grid"])
+            noeud, steps = AStar(etat, lambda s: s.successorFunction(), lambda s: s.isGoal(), heuristiques[nom])
+            assert noeud is not None, nom + " " + LEVELS[i]["name"]
+            assert noeud.g == couts_optimaux[i], nom + " " + LEVELS[i]["name"]
+            assert steps == steps_attendus[nom][i], nom + " " + LEVELS[i]["name"]
+            courant = etat
+            for action in noeud.getSolution():
+                for a, suivant in courant.successorFunction():
+                    if a == action:
+                        courant = suivant
+            assert courant.isGoal(), nom + " " + LEVELS[i]["name"]
+
+
 if __name__ == "__main__":
     test_mur_bloque_deplacement()
     test_pousser_caisse_dans_mur_est_illegale()
@@ -200,4 +262,9 @@ if __name__ == "__main__":
     test_bfs_une_poussee()
     test_bfs_sans_solution()
     test_bfs_resout_tous_les_niveaux()
+    test_node_f()
+    test_heuristiques()
+    test_astar_etat_initial_deja_but()
+    test_astar_sans_solution()
+    test_astar_resout_tous_les_niveaux()
     print("Tous les tests sont passes.")
