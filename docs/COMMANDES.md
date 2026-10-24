@@ -36,7 +36,9 @@ Remplacer 5 par le numéro du niveau :
 | Flèches | Bouger le chat (et pousser les caisses) ; garder la flèche appuyée pour avancer en continu |
 | Z, Retour arrière ou bouton « Annuler » | Annuler le dernier coup |
 | R ou bouton « Recommencer » | Recommencer le niveau |
-| B ou bouton « Résoudre (BFS) » | Lancer le BFS : trace la trajectoire et joue la solution tout seul |
+| B ou bouton « BFS » | Lancer le BFS : trace la trajectoire et joue la solution tout seul |
+| 1, 2, 3 ou boutons « A* h1 », « A* h2 », « A* h3 » | Pareil avec A* et l'heuristique h1, h2 ou h3 |
+| C ou bouton « Comparer » | Lance les 4 algorithmes depuis la position actuelle et affiche un tableau (coût, steps, temps) ; une touche ou un clic le ferme |
 | Une flèche pendant la lecture | Arrête la lecture automatique |
 | M ou bouton « Menu » | Retour au menu de choix du niveau |
 | S | Couper / remettre le son (ambiance de prairie et bruit de pas) |
@@ -50,6 +52,8 @@ Quand toutes les caisses sont sur les cibles : la porte s'ouvre avec de la lumi�
 python main.py --console
 ```
 Résout les 8 niveaux avec le BFS et affiche la solution, le coût et le temps.
+
+`python main.py --compare` : tableau BFS / A* h1 / h2 / h3 (coût, steps, temps) sur les 8 niveaux.
 
 ## Tests
 ```

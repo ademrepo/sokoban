@@ -3,8 +3,9 @@
 # - rendu d'un niveau avec les sprites du pack, decor autour et effets (lucioles, etincelles) ;
 # - jeu manuel : le chat et les caisses glissent d'une case a l'autre, compteur de coups,
 #   annuler (Z), recommencer ;
-# - bouton "Resoudre (BFS)" : cout, steps (noeuds developpes) et temps de calcul, puis trajectoire tracee
-#   et lecture automatique de la solution ;
+# - boutons BFS, A* h1, A* h2, A* h3 : cout, steps (noeuds developpes) et temps de calcul, puis trajectoire
+#   tracee et lecture automatique de la solution ;
+# - bouton "Comparer" : lance les 4 algorithmes et affiche leur cout, leurs steps et leur temps ;
 # - fin de niveau : la porte s'ouvre et s'illumine, le chat va devant la porte et remue la queue,
 #   une pancarte "Bravo" descend avec ses boutons (Rejouer, Niveau suivant, Menu) ;
 # - sons crees par le code (ambiance de prairie, bruit de pas), touche S pour couper.
@@ -18,11 +19,12 @@ import pygame
 from levels import LEVELS
 from sokoban import SokobanPuzzle, ACTIONS
 from search import BFS
+from astar import AStar, h1, h2, h3
 from assets_loader import load_sprites, load_sounds
 
 TAILLE = 44            # taille d'une case en pixels
 MARGE = 2              # marge autour du plus grand niveau, en nombre de cases (sert de decor)
-HAUTEUR_BARRE = 112    # hauteur de la barre d'infos en bas de la fenetre, en pixels
+HAUTEUR_BARRE = 152    # hauteur de la barre d'infos en bas de la fenetre, en pixels
 # Couleurs de la cible : plaque de pierre avec un contour dore (plus brillant quand une caisse est dessus).
 COULEUR_PLAQUE = (120, 115, 105)
 COULEUR_CONTOUR = (205, 150, 50)
@@ -44,6 +46,9 @@ DUREE_GLISSE = 900       # le glissement vers le niveau suivant
 
 # La porte est ouverte (et la lumiere allumee) pendant toutes ces phases.
 PHASES_PORTE_OUVERTE = ("ouverture", "marche", "queue", "bravo")
+
+# Les algorithmes proposes : (nom, heuristique) ; None = pas d'heuristique, c'est le BFS.
+ALGOS = [("BFS", None), ("A* h1", h1), ("A* h2", h2), ("A* h3", h3)]
 
 # Temps entre deux pas quand le programme joue la solution tout seul, en millisecondes.
 DELAI_PAS = 260
@@ -126,10 +131,16 @@ class Game:
         self.changer_son()
 
         # Les quatre boutons de la barre d'infos (rectangles cliquables).
-        self.bouton_resoudre = pygame.Rect(14, hauteur + 56, 176, 34)
-        self.bouton_annuler = pygame.Rect(202, hauteur + 56, 120, 34)
-        self.bouton_recommencer = pygame.Rect(334, hauteur + 56, 150, 34)
-        self.bouton_menu = pygame.Rect(496, hauteur + 56, 106, 34)
+        # Premiere ligne : un bouton par algorithme (BFS, A* h1, h2, h3) puis "Comparer".
+        self.boutons_algos = []
+        for k in range(len(ALGOS)):
+            self.boutons_algos.append(pygame.Rect(14 + k * 118, hauteur + 56, 110, 34))
+        self.bouton_comparer = pygame.Rect(14 + len(ALGOS) * 118, hauteur + 56, 110, 34)
+        # Deuxieme ligne.
+        self.bouton_annuler = pygame.Rect(14, hauteur + 96, 120, 34)
+        self.bouton_recommencer = pygame.Rect(146, hauteur + 96, 150, 34)
+        self.bouton_menu = pygame.Rect(308, hauteur + 96, 106, 34)
+        self.comparaison = []         # lignes de texte du tableau "Comparer" (vide = tableau cache)
 
         # Cartes du menu : une par niveau, sur deux colonnes, au milieu de la zone de jeu.
         self.boutons_niveaux = []
@@ -211,8 +222,8 @@ class Game:
         pygame.display.set_caption("Sokoban - Menu")
 
     def annuler_solution(self):
-        # Efface la solution du BFS et arrete la lecture automatique.
-        self.solution = None      # liste d'actions trouvee par le BFS
+        # Efface la solution trouvee et arrete la lecture automatique.
+        self.solution = None      # liste d'actions trouvee par l'algorithme
         self.trajectoire = []     # positions (ligne, colonne) du chat sur le chemin de la solution
         self.auto = False         # vrai pendant que le programme joue la solution tout seul
         self.pas_auto = 0         # nombre d'actions de la solution deja jouees
@@ -241,6 +252,8 @@ class Game:
                 self.en_cours = False
             elif self.phase == "menu":
                 self.evenement_menu(evenement)
+            elif len(self.comparaison) > 0 and evenement.type in (pygame.KEYDOWN, pygame.MOUSEBUTTONDOWN):
+                self.comparaison = []      # le tableau se ferme a la prochaine touche ou au prochain clic
             elif evenement.type == pygame.KEYDOWN:
                 if evenement.key == pygame.K_ESCAPE:
                     self.en_cours = False
@@ -252,8 +265,18 @@ class Game:
                     self.changer_son()
                 if evenement.key in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_n) and self.phase == "bravo":
                     self.niveau_suivant()
-                if evenement.key == pygame.K_b and self.phase == "jeu":
-                    self.resoudre()
+                if self.phase == "jeu":
+                    # B = BFS, 1 / 2 / 3 = A* avec h1 / h2 / h3, C = comparer les quatre.
+                    if evenement.key == pygame.K_b:
+                        self.resoudre(0)
+                    if evenement.key == pygame.K_1:
+                        self.resoudre(1)
+                    if evenement.key == pygame.K_2:
+                        self.resoudre(2)
+                    if evenement.key == pygame.K_3:
+                        self.resoudre(3)
+                    if evenement.key == pygame.K_c:
+                        self.comparer()
                 if evenement.key in (pygame.K_z, pygame.K_BACKSPACE) and self.phase == "jeu":
                     self.annuler_coup()
                 if evenement.key in TOUCHES and self.phase == "jeu":
@@ -266,8 +289,12 @@ class Game:
             elif evenement.type == pygame.MOUSEBUTTONDOWN and evenement.button == 1:
                 if self.bouton_recommencer.collidepoint(evenement.pos):
                     self.charger_niveau(self.numero)
-                if self.bouton_resoudre.collidepoint(evenement.pos) and self.phase == "jeu":
-                    self.resoudre()
+                if self.phase == "jeu":
+                    for k in range(len(ALGOS)):
+                        if self.boutons_algos[k].collidepoint(evenement.pos):
+                            self.resoudre(k)
+                    if self.bouton_comparer.collidepoint(evenement.pos):
+                        self.comparer()
                 if self.bouton_annuler.collidepoint(evenement.pos) and self.phase == "jeu":
                     self.annuler_coup()
                 if self.bouton_menu.collidepoint(evenement.pos):
@@ -385,22 +412,44 @@ class Game:
         t = min(1.0, (pygame.time.get_ticks() - self.anim_debut) / float(DUREE_MOUVEMENT))
         return 1 - (1 - t) * (1 - t)
 
-    def resoudre(self):
-        # Lance le BFS depuis la position actuelle, mesure le temps de calcul, trace la trajectoire
-        # du chat (positions de chaque etat du chemin) et demarre la lecture automatique.
-        self.annuler_solution()
+    def lancer(self, k):
+        # Lance l'algorithme numero k de ALGOS depuis la position actuelle.
+        # Retourne (noeud but ou None, steps, temps de calcul en secondes).
+        nom, h = ALGOS[k]
         debut = time.time()
-        noeud, steps = BFS(self.etat, lambda s: s.successorFunction(), lambda s: s.isGoal())
-        duree = time.time() - debut
-        # cout = longueur de la solution ; steps = noeuds developpes par le BFS (travail de la recherche).
+        if h is None:
+            noeud, steps = BFS(self.etat, lambda s: s.successorFunction(), lambda s: s.isGoal())
+        else:
+            noeud, steps = AStar(self.etat, lambda s: s.successorFunction(), lambda s: s.isGoal(), h)
+        return noeud, steps, time.time() - debut
+
+    def resoudre(self, k):
+        # Lance l'algorithme numero k, trace la trajectoire du chat (positions de chaque etat du chemin)
+        # et demarre la lecture automatique.
+        self.annuler_solution()
+        nom = ALGOS[k][0]
+        noeud, steps, duree = self.lancer(k)
+        # cout = longueur de la solution ; steps = noeuds developpes (travail de la recherche).
         if noeud is None:
-            self.resultat = "BFS : aucune solution | " + str(steps) + " steps"
+            self.resultat = nom + " : aucune solution | " + str(steps) + " steps"
         else:
             self.solution = noeud.getSolution()
             self.trajectoire = [etat.player_pos for etat in noeud.getPath()]
             self.auto = True
             self.dernier_pas = pygame.time.get_ticks()
-            self.resultat = "BFS : cout " + str(noeud.g) + " | " + str(steps) + " steps | " + "%.3f" % duree + " s"
+            self.resultat = nom + " : cout " + str(noeud.g) + " | " + str(steps) + " steps | " + "%.3f" % duree + " s"
+
+    def comparer(self):
+        # Lance les 4 algorithmes depuis la position actuelle et prepare le tableau (une ligne par algorithme).
+        # La fenetre se fige quelques secondes sur les grands niveaux, le temps du calcul.
+        self.annuler_solution()
+        self.comparaison = []
+        for k in range(len(ALGOS)):
+            noeud, steps, duree = self.lancer(k)
+            cout = "-"
+            if noeud is not None:
+                cout = str(noeud.g)
+            self.comparaison.append("%-7s cout %-4s steps %-7d %.3f s" % (ALGOS[k][0], cout, steps, duree))
 
     def changer_phase(self, phase):
         self.phase = phase
@@ -947,7 +996,7 @@ class Game:
         self.ecran.blit(image, (rectangle.x + (rectangle.width - image.get_width()) // 2, rectangle.y + (rectangle.height - image.get_height()) // 2))
 
     def dessiner_barre(self):
-        # Barre d'infos en bas : niveau et coups, resultat du BFS (ou une astuce), boutons, rappel des touches.
+        # Barre d'infos en bas : niveau et coups, resultat de l'algorithme (ou une astuce), boutons, rappel des touches.
         haut = self.monde.get_height()
         largeur = self.ecran.get_width()
         # Fond en bois sombre, avec un filet dore en haut.
@@ -967,14 +1016,27 @@ class Game:
         if self.resultat != "":
             self.ecrire_ombre(self.resultat, 16, (130, 225, 255), 14, haut + 34)
         else:
-            self.ecrire_ombre("Astuce : B pour voir la solution du BFS", 16, (220, 200, 170), 14, haut + 34)
+            self.ecrire_ombre("Astuce : choisis un algorithme pour voir sa solution", 16, (220, 200, 170), 14, haut + 34)
 
-        self.dessiner_bouton(self.bouton_resoudre, "Resoudre (BFS)")
+        for k in range(len(ALGOS)):
+            self.dessiner_bouton(self.boutons_algos[k], ALGOS[k][0])
+        self.dessiner_bouton(self.bouton_comparer, "Comparer")
         self.dessiner_bouton(self.bouton_annuler, "Annuler")
         self.dessiner_bouton(self.bouton_recommencer, "Recommencer")
         self.dessiner_bouton(self.bouton_menu, "Menu")
-        aide = "Fleches: bouger  Z: annuler  R: rejouer  B: BFS  M: menu  S: son"
-        self.ecran.blit(self.ecrire(aide, 12, (210, 185, 150)), (14, haut + 96))
+        aide = "Z: annuler  R: rejouer  B: BFS  1 2 3: A*  C: comparer  M: menu  S: son"
+        self.ecran.blit(self.ecrire(aide, 12, (210, 185, 150)), (14, haut + 138))
+
+    def dessiner_comparaison(self):
+        # Tableau "Comparer" : planche au milieu de la zone de jeu, une ligne par algorithme.
+        largeur = self.monde.get_width()
+        planche = pygame.Rect(0, 0, 500, 60 + 30 * len(self.comparaison) + 30)
+        planche.center = (largeur // 2, self.monde.get_height() // 2)
+        self.dessiner_planche(planche, 12)
+        self.ecrire_ombre("Comparaison des algorithmes", 22, (255, 235, 170), planche.centerx, planche.y + 14, True)
+        for i in range(len(self.comparaison)):
+            self.ecrire_ombre(self.comparaison[i], 18, (255, 245, 215), planche.x + 24, planche.y + 54 + 30 * i)
+        self.ecrire_ombre("(une touche ou un clic pour fermer)", 13, (230, 205, 160), planche.centerx, planche.bottom - 24, True)
 
     def draw(self):
         ecoule = pygame.time.get_ticks() - self.debut_phase
@@ -1000,5 +1062,7 @@ class Game:
         if self.phase == "bravo":
             self.dessiner_pancarte(ecoule)
 
+        if len(self.comparaison) > 0:
+            self.dessiner_comparaison()
         self.dessiner_barre()
         pygame.display.flip()

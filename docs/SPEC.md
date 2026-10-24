@@ -241,4 +241,4 @@ Le sujet de la partie 2 ajoute à l'énoncé de la partie 1 (les §1 à 6 ci-des
 - `astar.py` : `AStar(s, successorsFn, isGoal, h)` selon la Figure 1.29 du cours (Open = file de priorité ordonnée par f via `heapq`, Closed = dictionnaire ; remplacement dans Open / retrait de Closed quand un meilleur f est trouvé ; test du but à la sortie de Open). Retourne `(noeud but ou None, steps)`, `steps` = noeuds développés, comme le BFS.
 - Heuristiques (dans `astar.py`) : `h1` = nombre de caisses hors cible ; `h2` = 2*h1 + somme des distances de Manhattan caisse → cible libre la plus proche ; `h3` (proposée) = h2 + distance joueur → caisse la plus proche − 1 (chaque déplacement coûte 1, h2 ignore le trajet du joueur).
 - Test : comparer BFS, A* h1, h2, h3 sur les niveaux (`python main.py --compare`).
-- Interface (étape 30, à faire) : afficher coût et steps des différents algorithmes + simulation de la solution.
+- Interface (étape 30, faite) : boutons BFS / A* h1 / h2 / h3 (touches B, 1, 2, 3) qui lancent l'algorithme et jouent la solution ; bouton « Comparer » (touche C) qui affiche coût, steps et temps des 4 algorithmes.

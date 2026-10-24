@@ -41,7 +41,7 @@ Deuxième sujet : algorithme A* (demandé le 2026-10-24, d'après `Project 1 Par
 
 - [x] Étape 28 — Node : `f` et `setF` ; `astar.py` (A* de la Figure 1.29 + heuristiques h1, h2, h3) ; tests — 2026-10-24 — docs/logs/2026-10-24_session-35.md
 - [x] Étape 29 — Comparaison BFS / A* (`python main.py --compare`), complexité expliquée dans EXPLICATIONS — 2026-10-24 — docs/logs/2026-10-24_session-35.md
-- [ ] Étape 30 — Interface Pygame : choix de l'algorithme (BFS, A* h1, h2, h3), coût et steps de chacun affichés, simulation de la solution
+- [x] Étape 30 — Interface Pygame : choix de l'algorithme (BFS, A* h1, h2, h3), coût et steps de chacun affichés (tableau « Comparer »), simulation de la solution — 2026-10-24 — docs/logs/2026-10-24_session-36.md
 
 Correspondance avec les anciens numéros (avant la renumérotation du 2026-10-20, commit `4dc4589`) :
 
@@ -59,4 +59,4 @@ Correspondance avec les anciens numéros (avant la renumérotation du 2026-10-20
 Hors plan : commit `c3de3e1` (décor identique dans tous les niveaux, « Niveau N », fenêtre plus petite) = début de l'étape 12, documenté après coup dans docs/logs/2026-10-20_session-15.md.
 
 ## Prochaine étape
-Étapes 0 à 29 faites. Étape 30 : interface Pygame pour A* (voir `docs/SPEC.md` §7 et le log session 35). Test : `python test_core.py`, `python main.py --compare`.
+Étapes 0 à 30 faites (sujet partie 2 complet : A*, comparaison, interface). Ensuite, relire `docs/EXPLICATIONS.md` (§13 : A*) pour la soutenance. Test : `python test_core.py`, `python main.py --compare`, `python main.py`.

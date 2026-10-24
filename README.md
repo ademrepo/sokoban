@@ -52,7 +52,7 @@ les flèches puis Entrée.
 |---|---|
 | Flèches | bouger le chat et pousser les caisses (garder appuyé pour avancer en continu) |
 | Z, Retour arrière ou « Annuler » | annuler le dernier coup |
-| B ou « Résoudre (BFS) » | résout depuis la position actuelle : affiche le coût de la solution, les steps (nœuds développés par le BFS) et le temps, trace la trajectoire, puis joue la solution |
+| B ou « BFS » (1, 2, 3 ou « A* h1/h2/h3 » pour A* ; C ou « Comparer » : tableau des 4 algorithmes) | résout depuis la position actuelle : affiche le coût de la solution, les steps (nœuds développés par le BFS) et le temps, trace la trajectoire, puis joue la solution |
 | R ou « Recommencer » | recommencer le niveau |
 | M ou « Menu » | retour au menu |
 | S | couper / remettre le son |
@@ -84,6 +84,7 @@ Les tests vérifient les règles, `Node`, le BFS, la forme des niveaux et les co
 - `sokoban.py` — règles du jeu et état (`SokobanPuzzle`)
 - `node.py` — noeud de l'arbre de recherche (`Node`)
 - `search.py` — algorithme `BFS`
+- `astar.py` — algorithme `AStar` et heuristiques `h1`, `h2`, `h3`
 - `levels.py` — les niveaux
 - `gui.py` — interface Pygame (classe `Game`)
 - `assets_loader.py` — découpe des sprites et sons créés par le code
