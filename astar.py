@@ -50,34 +50,29 @@ def h2(etat):
 
 
 def h3(etat):
-    # Heuristique 3 (proposee), deux idees d'un joueur humain :
-    # 1) Une cible ne peut recevoir qu'une seule caisse. h2 laisse deux caisses viser la meme cible,
-    #    ce qui sous-estime le travail. Ici chaque caisse prend la cible libre la plus proche
-    #    parmi celles que les caisses precedentes n'ont pas deja prises.
-    # 2) Chaque deplacement coute 1, meme sans pousser : le joueur doit d'abord marcher jusqu'a une caisse.
-    #    On ajoute la distance joueur -> caisse la plus proche, moins 1 (il doit etre colle a la caisse).
+    # Heuristique 3 (proposee) : h2 + le trajet du joueur jusqu'a la caisse la plus proche.
+    #
+    # Raisonnement (comme un joueur humain) :
+    # - h2 ne regarde que les caisses : "combien de poussees il reste". Mais ce n'est pas le joueur
+    #   qui est sur la cible, c'est la caisse : le joueur doit d'abord marcher jusqu'a elle.
+    # - Dans ce jeu chaque deplacement coute 1, qu'on pousse ou pas. Ce trajet est donc un vrai cout
+    #   que h2 oublie. Deux etats avec les memes caisses ne sont pas aussi proches du but si, dans l'un,
+    #   le joueur est tout pres d'une caisse et, dans l'autre, tout au fond de la salle.
+    # - Le cours fait la meme chose dans l'exemple du labyrinthe : h = distance de Manhattan de
+    #   l'agent (ici le joueur) a son but (ici la caisse la plus proche).
+    # - On retire 1 car le joueur doit se mettre a COTE de la caisse pour la pousser, pas dessus.
+    # - Quand il n'y a plus de caisse hors cible, c'est le but : h3 = 0.
     # Pas de detection de blocage (deadlock) : on reste simple.
     caisses = positions(etat, "B")
     if len(caisses) == 0:
         return 0
-    cibles = positions(etat, "S.")
-    prises = []
-    total = 2 * len(caisses)
-    for caisse in caisses:
-        plus_proche = None
-        for cible in cibles:
-            if cible not in prises:
-                if plus_proche is None or distance_manhattan(caisse, cible) < distance_manhattan(caisse, plus_proche):
-                    plus_proche = cible
-        prises.append(plus_proche)
-        total = total + distance_manhattan(caisse, plus_proche)
     joueur = etat.player_pos
-    trajet = None
+    plus_proche = None
     for caisse in caisses:
         d = distance_manhattan(joueur, caisse)
-        if trajet is None or d < trajet:
-            trajet = d
-    return total + trajet - 1
+        if plus_proche is None or d < plus_proche:
+            plus_proche = d
+    return h2(etat) + plus_proche - 1
 
 
 def AStar(s, successorsFn, isGoal, h):

@@ -42,7 +42,7 @@ Deuxième sujet : algorithme A* (demandé le 2026-10-24, d'après `Project 1 Par
 - [x] Étape 28 — Node : `f` et `setF` ; `astar.py` (A* de la Figure 1.29 + heuristiques h1, h2, h3) ; tests — 2026-10-24 — docs/logs/2026-10-24_session-35.md
 - [x] Étape 29 — Comparaison BFS / A* (`python main.py --compare`), complexité expliquée dans EXPLICATIONS — 2026-10-24 — docs/logs/2026-10-24_session-35.md
 - [x] Étape 30 — Interface Pygame : choix de l'algorithme (BFS, A* h1, h2, h3), coût et steps de chacun affichés (tableau « Comparer »), simulation de la solution — 2026-10-24 — docs/logs/2026-10-24_session-36.md
-- [x] Étape 31 — h3 refaite : une cible = une caisse + trajet du joueur, sans deadlock ; tests et explications mis à jour — 2026-10-27 — docs/logs/2026-10-27_session-37.md
+- [x] Étape 31 — h3 : essai d'une version avec une cible = une caisse (trop compliquée, abandonnée) ; retour à h2 + trajet du joueur, avec le raisonnement écrit dans le code et EXPLICATIONS §13 — 2026-10-27 — docs/logs/2026-10-27_session-38.md
 
 Correspondance avec les anciens numéros (avant la renumérotation du 2026-10-20, commit `4dc4589`) :
 

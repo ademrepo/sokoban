@@ -340,15 +340,23 @@ L'état est la photo du jeu (la grille). Le nœud est un point de l'arbre de rec
 **Heuristiques.**
 - h1 = nombre de caisses pas encore sur une cible.
 - h2 = 2 × h1 + somme, pour chaque caisse hors cible, de la distance de Manhattan à la cible libre la plus proche.
-- h3 (proposée) = comme h2, mais avec deux idées « d'humain » : (1) une cible ne reçoit qu'une seule caisse (chaque caisse prend la cible libre la plus proche qui n'est pas déjà prise ; h2 laisse deux caisses viser la même cible) ; (2) on ajoute le trajet du joueur : distance jusqu'à la caisse la plus proche − 1, car chaque déplacement coûte 1 même sans pousser. Pas de détection de deadlock.
+- h3 (proposée) = h2 + distance du joueur à la caisse hors cible la plus proche − 1.
+
+**Pourquoi h3 (le raisonnement à dire à l'oral).**
+1. *Ce qui manque à h2.* h2 ne regarde que les caisses : combien il en reste et à quelle distance de leur cible. Or ce n'est pas la caisse qui se déplace toute seule : c'est le joueur qui la pousse, et il doit d'abord marcher jusqu'à elle.
+2. *Ce trajet coûte.* Dans notre modèle chaque déplacement coûte 1, qu'on pousse ou non. Donc le trajet du joueur fait partie du coût réel jusqu'au but, et h2 l'oublie : il donne la même valeur à deux états dont l'un a le joueur collé à une caisse et l'autre tout au fond de la salle, alors que le premier est clairement plus proche de la solution.
+3. *Le cours dit la même chose.* Dans l'exemple du labyrinthe (A*, Figure 1.41), h est la distance de Manhattan entre l'agent et le but. Ici l'agent est le joueur, et son « but » immédiat est la caisse la plus proche.
+4. *Pourquoi « − 1 ».* Pour pousser, le joueur se met à côté de la caisse, pas sur elle : s'il en est à 3 cases, il n'a que 2 pas à faire.
+5. *Pourquoi on s'arrête là.* On ajoute une seule idée à h2, facile à calculer (une boucle sur les caisses) et facile à justifier. On n'a pas cherché les blocages (caisse dans un coin) : ce serait plus compliqué et pas demandé.
+6. *Résultat.* Moins de steps que h2 sur tous les niveaux (voir le tableau), avec le même coût de solution.
 
 **Complexité.** Dans le pire cas, A* comme le BFS est en O(b^d) en temps et en espace : on ne peut pas faire mieux sans connaître h. Mais la complexité réelle dépend de la qualité de h : plus h est proche du vrai coût restant, moins A* développe de noeuds (le facteur de branchement effectif diminue). Mesure (steps = noeuds développés) :
 
 | Niveau | BFS | A* h1 | A* h2 | A* h3 |
 |---|---|---|---|---|
 | Exemple 2 | 1806 | 1827 | 1400 | 979 |
-| Exemple 3 | 6013 | 5984 | 3126 | 2687 |
-| Exemple 4 | 6051 | 5475 | 3023 | 2277 |
-| Exemple 5 | 11659 | 10190 | 2980 | 1892 |
+| Exemple 3 | 6013 | 5984 | 3126 | 2777 |
+| Exemple 4 | 6051 | 5475 | 3023 | 2577 |
+| Exemple 5 | 11659 | 10190 | 2980 | 2241 |
 
-Lecture : h1 est trop faible (presque comme ne pas avoir d'heuristique : A* ≈ BFS, parfois même un peu pire à cause des égalités de f). h2 divise les steps par 2 à 4, h3 gagne encore 10 à 35 %. Les quatre algorithmes trouvent le même coût optimal sur les 8 niveaux. Le temps par noeud est plus grand pour A* (calcul de h, tas), donc sur les petits niveaux le BFS peut finir plus vite. L'optimalité de A* est garantie seulement si h est admissible (ne surestime jamais) ; h1 l'est, h2 et h3 pas forcément, mais ici les coûts sont optimaux.
+Lecture : h1 est trop faible (presque comme ne pas avoir d'heuristique : A* ≈ BFS, parfois même un peu pire à cause des égalités de f). h2 divise les steps par 2 à 4, h3 gagne encore 10 à 25 %. Les quatre algorithmes trouvent le même coût optimal sur les 8 niveaux. Le temps par noeud est plus grand pour A* (calcul de h, tas), donc sur les petits niveaux le BFS peut finir plus vite. L'optimalité de A* est garantie seulement si h est admissible (ne surestime jamais) ; h1 l'est, h2 et h3 pas forcément, mais ici les coûts sont optimaux.
