@@ -340,15 +340,15 @@ L'état est la photo du jeu (la grille). Le nœud est un point de l'arbre de rec
 **Heuristiques.**
 - h1 = nombre de caisses pas encore sur une cible.
 - h2 = 2 × h1 + somme, pour chaque caisse hors cible, de la distance de Manhattan à la cible libre la plus proche.
-- h3 (proposée) = h2 + distance du joueur à la caisse la plus proche − 1. Chaque déplacement coûte 1 même sans pousser ; h2 ne compte jamais le trajet du joueur jusqu'à la caisse, h3 oui.
+- h3 (proposée) = comme h2, mais avec deux idées « d'humain » : (1) une cible ne reçoit qu'une seule caisse (chaque caisse prend la cible libre la plus proche qui n'est pas déjà prise ; h2 laisse deux caisses viser la même cible) ; (2) on ajoute le trajet du joueur : distance jusqu'à la caisse la plus proche − 1, car chaque déplacement coûte 1 même sans pousser. Pas de détection de deadlock.
 
 **Complexité.** Dans le pire cas, A* comme le BFS est en O(b^d) en temps et en espace : on ne peut pas faire mieux sans connaître h. Mais la complexité réelle dépend de la qualité de h : plus h est proche du vrai coût restant, moins A* développe de noeuds (le facteur de branchement effectif diminue). Mesure (steps = noeuds développés) :
 
 | Niveau | BFS | A* h1 | A* h2 | A* h3 |
 |---|---|---|---|---|
 | Exemple 2 | 1806 | 1827 | 1400 | 979 |
-| Exemple 3 | 6013 | 5984 | 3126 | 2777 |
-| Exemple 4 | 6051 | 5475 | 3023 | 2577 |
-| Exemple 5 | 11659 | 10190 | 2980 | 2241 |
+| Exemple 3 | 6013 | 5984 | 3126 | 2687 |
+| Exemple 4 | 6051 | 5475 | 3023 | 2277 |
+| Exemple 5 | 11659 | 10190 | 2980 | 1892 |
 
-Lecture : h1 est trop faible (presque comme ne pas avoir d'heuristique : A* ≈ BFS, parfois même un peu pire à cause des égalités de f). h2 divise les steps par 2 à 4, h3 gagne encore 10 à 30 %. Les quatre algorithmes trouvent le même coût optimal sur les 8 niveaux. Le temps par noeud est plus grand pour A* (calcul de h, tas), donc sur les petits niveaux le BFS peut finir plus vite. L'optimalité de A* est garantie seulement si h est admissible (ne surestime jamais) ; h1 l'est, h2 et h3 pas forcément, mais ici les coûts sont optimaux.
+Lecture : h1 est trop faible (presque comme ne pas avoir d'heuristique : A* ≈ BFS, parfois même un peu pire à cause des égalités de f). h2 divise les steps par 2 à 4, h3 gagne encore 10 à 35 %. Les quatre algorithmes trouvent le même coût optimal sur les 8 niveaux. Le temps par noeud est plus grand pour A* (calcul de h, tas), donc sur les petits niveaux le BFS peut finir plus vite. L'optimalité de A* est garantie seulement si h est admissible (ne surestime jamais) ; h1 l'est, h2 et h3 pas forcément, mais ici les coûts sont optimaux.

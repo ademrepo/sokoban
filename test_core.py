@@ -202,6 +202,11 @@ def test_heuristiques():
     # Joueur a 3 cases de la caisse : h3 = h2 + 2.
     etat = SokobanPuzzle(["OOOOOOO", "ORO BSO", "OOOOOOO"])
     assert h1(etat) == 1 and h2(etat) == 3 and h3(etat) == 3 + 2
+    # Deux caisses, une seule cible proche : h2 les envoie toutes les deux sur la meme cible,
+    # h3 donne a la deuxieme caisse l'autre cible (plus loin), donc h3 > h2.
+    etat = SokobanPuzzle(["OOOOOOOOO", "OSBBR  SO", "OOOOOOOOO"])
+    assert h2(etat) == 2 * 2 + 1 + 2
+    assert h3(etat) == 2 * 2 + 1 + 4 + (1 - 1)
     # Etat but : les trois heuristiques valent 0.
     but = SokobanPuzzle(["OOOO", "OR *", "OOOO"])
     assert h1(but) == 0 and h2(but) == 0 and h3(but) == 0
@@ -226,7 +231,7 @@ def test_astar_resout_tous_les_niveaux():
     steps_attendus = {
         "h1": [11, 1827, 5984, 5475, 10190, 3, 15, 606],
         "h2": [8, 1400, 3126, 3023, 2980, 3, 12, 131],
-        "h3": [5, 979, 2777, 2577, 2241, 3, 9, 89],
+        "h3": [5, 979, 2687, 2277, 1892, 3, 9, 88],
     }
     heuristiques = {"h1": h1, "h2": h2, "h3": h3}
     for nom in heuristiques:

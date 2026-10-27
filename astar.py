@@ -50,20 +50,34 @@ def h2(etat):
 
 
 def h3(etat):
-    # Heuristique 3 (proposee) : h2 + distance du joueur a la caisse hors cible la plus proche.
-    # Idee : dans ce jeu chaque deplacement coute 1, meme sans pousser. Le joueur doit d'abord
-    # aller jusqu'a une caisse avant de pouvoir la pousser ; h2 ignore ce trajet.
-    # On retire 1 car le joueur doit etre COLLE a la caisse, pas dessus.
+    # Heuristique 3 (proposee), deux idees d'un joueur humain :
+    # 1) Une cible ne peut recevoir qu'une seule caisse. h2 laisse deux caisses viser la meme cible,
+    #    ce qui sous-estime le travail. Ici chaque caisse prend la cible libre la plus proche
+    #    parmi celles que les caisses precedentes n'ont pas deja prises.
+    # 2) Chaque deplacement coute 1, meme sans pousser : le joueur doit d'abord marcher jusqu'a une caisse.
+    #    On ajoute la distance joueur -> caisse la plus proche, moins 1 (il doit etre colle a la caisse).
+    # Pas de detection de blocage (deadlock) : on reste simple.
     caisses = positions(etat, "B")
     if len(caisses) == 0:
         return 0
+    cibles = positions(etat, "S.")
+    prises = []
+    total = 2 * len(caisses)
+    for caisse in caisses:
+        plus_proche = None
+        for cible in cibles:
+            if cible not in prises:
+                if plus_proche is None or distance_manhattan(caisse, cible) < distance_manhattan(caisse, plus_proche):
+                    plus_proche = cible
+        prises.append(plus_proche)
+        total = total + distance_manhattan(caisse, plus_proche)
     joueur = etat.player_pos
-    plus_proche = None
+    trajet = None
     for caisse in caisses:
         d = distance_manhattan(joueur, caisse)
-        if plus_proche is None or d < plus_proche:
-            plus_proche = d
-    return h2(etat) + plus_proche - 1
+        if trajet is None or d < trajet:
+            trajet = d
+    return total + trajet - 1
 
 
 def AStar(s, successorsFn, isGoal, h):
