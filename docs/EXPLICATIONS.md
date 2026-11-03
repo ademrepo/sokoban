@@ -360,3 +360,22 @@ L'état est la photo du jeu (la grille). Le nœud est un point de l'arbre de rec
 | Exemple 5 | 11659 | 10190 | 2980 | 2241 |
 
 Lecture : h1 est trop faible (presque comme ne pas avoir d'heuristique : A* ≈ BFS, parfois même un peu pire à cause des égalités de f). h2 divise les steps par 2 à 4, h3 gagne encore 10 à 25 %. Les quatre algorithmes trouvent le même coût optimal sur les 8 niveaux. Le temps par noeud est plus grand pour A* (calcul de h, tas), donc sur les petits niveaux le BFS peut finir plus vite. L'optimalité de A* est garantie seulement si h est admissible (ne surestime jamais) ; h1 l'est, h2 et h3 pas forcément, mais ici les coûts sont optimaux.
+
+## 14) Détection de deadlock (sujet partie 3)
+
+1. *Définition.* Un deadlock est un état d'où le but ne peut plus être atteint, même si le joueur peut encore bouger (par exemple une caisse coincée dans un coin). A* standard continue pourtant à développer ces états, pour rien.
+2. *Deadlock d'angle* (`est_coin_deadlock`). Une caisse hors cible avec un mur au-dessus ou en dessous ET un mur à gauche ou à droite ne bougera plus jamais : pour la pousser il faudrait se placer dans le mur. Test en O(1) par caisse. Une caisse déjà sur une cible n'est pas un deadlock.
+3. *Deadlock de ligne* (`est_ligne_deadlock`). Une caisse hors cible collée à un mur ne peut que glisser le long de ce mur. On regarde toute la ligne de mur, dans les deux sens. Elle est perdue seulement si (a) aucune case de la ligne n'est une cible, et (b) la ligne est fermée par un mur à chaque bout (le mur du côté ne s'arrête pas : sinon la caisse pourrait sortir de la ligne). Ce test est volontairement prudent : mieux vaut rater un deadlock que d'en déclarer un à tort et perdre la solution optimale.
+4. *Élagage dans A\** (`AStarDeadlock`). Les successeurs qui sont un deadlock (`is_deadlock`) sont retirés de la liste avant d'entrer dans Open. `AStar` lui-même n'est pas modifié : `AStarDeadlock` lui passe une fonction de successeurs qui filtre. L'optimalité est conservée car un état deadlock ne mène jamais au but, donc aucune solution n'est perdue. Les tests le vérifient : même coût que le BFS sur les 10 niveaux.
+5. *Résultats* (steps = noeuds développés, A\* h3 sans / avec deadlock) :
+
+| Niveau | Sans | Avec | Gain |
+|---|---|---|---|
+| Exemple 2 | 979 | 491 | 49,8 % |
+| Exemple 3 | 2777 | 1010 | 63,6 % |
+| Exemple 4 | 2577 | 861 | 66,6 % |
+| Exemple 5 | 2241 | 1122 | 49,9 % |
+| Deadlock 1 | 93 | 79 | 15,1 % |
+| Deadlock 2 | 190 | 186 | 2,1 % |
+
+Lecture : le gain est grand quand l'heuristique est faible ou quand le niveau offre beaucoup de mauvaises poussées (avec h1 sur Deadlock 1 : 3926 → 862, soit 78 %). Sur Deadlock 1 et 2, h3 est déjà bonne, donc il reste peu à élaguer. Le tableau complet : `python main.py --deadlock`. Dans l'interface : bouton « A* DL » et tableau « Comparer ».

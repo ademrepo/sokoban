@@ -47,8 +47,8 @@ Deuxième sujet : algorithme A* (demandé le 2026-10-24, d'après `Project 1 Par
 Troisième sujet : détection de deadlock + interface finale (demandé le 2026-11-03, d'après `docs/prompt_claude_code.md`). L'étape 32 du prompt est découpée en trois :
 
 - [x] Étape 32a — Deadlocks : `is_deadlock` (angle + ligne de mur sans cible) dans `sokoban.py`, `AStarDeadlock` dans `astar.py`, niveaux Deadlock 1 et 2, tests, tableau `python main.py --deadlock` (et à la fin de `--compare`) — 2026-11-03 — docs/logs/2026-11-03_session-01.md
-- [ ] Étape 32b — Interface Pygame : écran d'accueil (Jouer / Comparer / Quitter), Échap = retour au menu, « Calcul en cours... », pause et vitesse de la simulation, barre d'infos avec l'algorithme choisi, menu à pages (plus de 8 niveaux), A* + deadlock et gain dans le tableau « Comparer »
-- [ ] Étape 32c — Documentation : § détection de deadlock dans `docs/EXPLICATIONS.md`, vérifications finales
+- [x] Étape 32b — Interface Pygame : écran d'accueil (Jouer / Comparer / Quitter), Échap = retour au menu, « Calcul en cours... », pause et vitesse de la simulation, barre d'infos avec l'algorithme choisi, menu à pages (plus de 8 niveaux), A* + deadlock et gain dans le tableau « Comparer » — 2026-11-03 — docs/logs/2026-11-03_session-02.md
+- [x] Étape 32c — Documentation : § 14 détection de deadlock dans `docs/EXPLICATIONS.md`, vérifications finales — 2026-11-03 — docs/logs/2026-11-03_session-02.md
 
 Correspondance avec les anciens numéros (avant la renumérotation du 2026-10-20, commit `4dc4589`) :
 
@@ -66,4 +66,4 @@ Correspondance avec les anciens numéros (avant la renumérotation du 2026-10-20
 Hors plan : commit `c3de3e1` (décor identique dans tous les niveaux, « Niveau N », fenêtre plus petite) = début de l'étape 12, documenté après coup dans docs/logs/2026-10-20_session-15.md.
 
 ## Prochaine étape
-Étapes 0 à 32a faites. Reste : 32b (interface Pygame, voir la liste ci-dessus) puis 32c (EXPLICATIONS.md). Test : `python test_core.py`, `python main.py --compare`, `python main.py`.
+Étapes 0 à 32 faites (32a, 32b, 32c). Reste à décider : « Maison 4 » (dans le stash) et `.gitignore` supprimé. Test : `python test_core.py`, `python main.py --compare`, `python main.py`.
