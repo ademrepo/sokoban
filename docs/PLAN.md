@@ -60,6 +60,8 @@ Troisième sujet : détection de deadlock + interface finale (demandé le 2026-1
 
 - [x] Étape 37 — Interface : niveau centré au pixel près, pingouin sans clignotement de direction, saut de joie à la porte, murs avec face de brique ou dessus de pierre + ombres sur le sol, pétales, nuage de poussière, caisse qui fait « pop », pancarte à droite (`gui.py`, `assets_loader.py`) — 2026-11-03 — docs/logs/2026-11-03_session-07.md
 
+- [x] Étape 38 — Jack : nouveau sprite `assets/njack.png` (face, dos, marche animée à gauche et à droite, content, queue qui remue) ; l'ancien chat dessiné par code est retiré — 2026-11-03 — docs/logs/2026-11-03_session-08.md
+
 Correspondance avec les anciens numéros (avant la renumérotation du 2026-10-20, commit `4dc4589`) :
 
 | Nouveau | Ancien | Contenu |

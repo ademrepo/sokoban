@@ -15,8 +15,6 @@ DOSSIER = os.path.join(DOSSIER_PROJET, "assets", "Pixel Art Top Down - Basic v1.
 DOSSIER_OMBRES = DOSSIER + "Extra/"   # memes feuilles, mais avec les ombres au sol
 
 # Pour rendre l'herbe aussi vive que dans l'apercu du pack (on ajoute ces valeurs R, V, B a chaque pixel).
-FICHIER_JACK = os.path.join(DOSSIER_PROJET, "assets", "jack.png")
-
 ECLAIRCIR_HERBE = (30, 32, 0)
 ECLAIRCIR_MUR = (45, 38, 28)
 
@@ -39,53 +37,30 @@ def decouper_hauteur(feuille, x, y, largeur, hauteur, hauteur_voulue):
     return pygame.transform.scale(morceau, (largeur_voulue, hauteur_voulue))
 
 
-def point(x, y, u):
-    # Les coordonnees du chat sont donnees pour une case de 48 pixels : u les met a la bonne taille.
-    return (int(x * u), int(y * u))
-
-
-def creer_joueur(taille, queue):
-    # Petit chat orange dessine avec pygame.draw (le pack n'a qu'un bloc de pierre rectangulaire),
-    # avec un chapeau vert pointu. queue = 0, 1 ou 2 : trois positions de la queue (pour la faire bouger).
-    u = taille / 48.0
-    image = pygame.Surface((taille, int(taille * 1.2)), pygame.SRCALPHA)
-    orange = (235, 150, 70)
-    clair = (250, 225, 190)
-    contour = (95, 55, 25)
-
-    # Queue : chaque position est une petite ligne brisee.
-    queues = [[(34, 52), (44, 47), (44, 38)], [(34, 52), (46, 51), (47, 43)], [(34, 52), (42, 45), (38, 37)]]
-    points = [point(x, y, u) for (x, y) in queues[queue]]
-    pygame.draw.lines(image, contour, False, points, int(7 * u))
-    pygame.draw.lines(image, orange, False, points, int(4 * u))
-
-    # Corps avec un ventre clair.
-    pygame.draw.ellipse(image, contour, (int(10 * u), int(34 * u), int(28 * u), int(22 * u)))
-    pygame.draw.ellipse(image, orange, (int(12 * u), int(36 * u), int(24 * u), int(18 * u)))
-    pygame.draw.ellipse(image, clair, (int(18 * u), int(41 * u), int(12 * u), int(12 * u)))
-
-    # Oreilles puis tete.
-    for oreille in ([(9, 28), (10, 14), (21, 22)], [(39, 28), (38, 14), (27, 22)]):
-        points = [point(x, y, u) for (x, y) in oreille]
-        pygame.draw.polygon(image, orange, points)
-        pygame.draw.polygon(image, contour, points, 2)
-    pygame.draw.circle(image, contour, point(24, 30, u), int(16 * u))
-    pygame.draw.circle(image, orange, point(24, 30, u), int(14 * u))
-    pygame.draw.ellipse(image, clair, (int(16 * u), int(33 * u), int(16 * u), int(11 * u)))
-
-    # Grands yeux verts, nez rose.
-    for x in (17, 31):
-        pygame.draw.circle(image, (255, 255, 255), point(x, 31, u), int(4 * u))
-        pygame.draw.circle(image, (60, 160, 80), point(x, 31, u), int(3 * u))
-        pygame.draw.circle(image, (20, 20, 20), point(x, 31, u), int(1.5 * u) + 1)
-    pygame.draw.circle(image, (255, 130, 150), point(24, 37, u), int(2 * u) + 1)
-
-    # Chapeau vert pointu avec un bandeau clair.
-    chapeau = [point(9, 26, u), point(39, 26, u), point(36, 13, u), point(33, 3, u), point(21, 9, u)]
-    pygame.draw.polygon(image, (50, 160, 60), chapeau)
-    pygame.draw.polygon(image, (20, 85, 30), chapeau, 2)
-    pygame.draw.rect(image, (235, 220, 120), (int(9 * u), int(23 * u), int(30 * u), int(5 * u)))
-    return image
+def charger_jack(sprites, hauteur_voulue):
+    # Jack le chat : njack.png est une planche de poses (avec des titres ecrits dessus). Chaque pose est un rectangle
+    # (x, y, largeur, hauteur) trouve a la main. Toutes les poses sont reduites du meme facteur
+    # (la pose de face fait hauteur_voulue pixels de haut).
+    feuille = pygame.image.load(os.path.join(DOSSIER_PROJET, "assets", "njack.png")).convert_alpha()
+    poses = {
+        "jack_face": (19, 29, 66, 77),
+        "jack_content": (107, 29, 62, 77),
+        "jack_queue1": (295, 30, 73, 76),      # de face, la queue remue
+        "jack_queue2": (382, 30, 71, 76),
+        "jack_dos": (2, 243, 57, 70),
+    }
+    # Marche de profil : 4 images vers la gauche et 4 vers la droite (elles alternent dans la planche).
+    x_marche = [6, 103, 199, 292, 410, 507, 602, 699]
+    for k in range(4):
+        poses["jack_gauche" + str(k)] = (x_marche[2 * k], 135, 88, 80)
+        poses["jack_droite" + str(k)] = (x_marche[2 * k + 1], 135, 88, 80)
+    facteur = hauteur_voulue / 77.0
+    for nom in poses:
+        x, y, largeur, hauteur = poses[nom]
+        morceau = feuille.subsurface(pygame.Rect(x, y, largeur, hauteur))
+        morceau = morceau.subsurface(morceau.get_bounding_rect())      # on enleve les bords vides
+        taille = (int(morceau.get_width() * facteur), int(morceau.get_height() * facteur))
+        sprites[nom] = pygame.transform.smoothscale(morceau, taille)
 
 
 def charger_pingouin(sprites, hauteur_voulue):
@@ -189,18 +164,7 @@ def load_sprites(taille):
     props = charger_feuille("TX Props.png")
     sprites["caisse"] = decouper(props, 160, 18, 32, 23, taille)
 
-    # Jack le chat : on charge assets/jack.png (3 images cote a cote, la queue dans 3 positions) ;
-    # s'il manque, on le dessine par code (voir creer_joueur). Pour le refaire : python assets_loader.py
-    noms_jack = ["joueur", "joueur_queue1", "joueur_queue2"]
-    if os.path.exists(FICHIER_JACK):
-        feuille_jack = pygame.image.load(FICHIER_JACK).convert_alpha()
-        largeur_image = feuille_jack.get_width() // 3
-        for k in range(3):
-            morceau = feuille_jack.subsurface(pygame.Rect(k * largeur_image, 0, largeur_image, feuille_jack.get_height()))
-            sprites[noms_jack[k]] = pygame.transform.smoothscale(morceau, (taille, int(taille * 1.2)))
-    else:
-        for k in range(3):
-            sprites[noms_jack[k]] = creer_joueur(taille, k)
+    charger_jack(sprites, int(taille * 1.1))
 
     # Decor autour du niveau : feuilles "avec ombres", proportions gardees (on fixe la hauteur).
     props_ombres = charger_feuille("TX Props with Shadow.png", DOSSIER_OMBRES)
@@ -303,11 +267,3 @@ def load_sounds():
     sons["pas"].set_volume(0.5)
     return sons
 
-
-if __name__ == "__main__":
-    # Enregistre le chat dans assets/jack.png : 3 images de 192 x 230 pixels, une par position de la queue.
-    feuille_jack = pygame.Surface((192 * 3, 230), pygame.SRCALPHA)
-    for k in range(3):
-        feuille_jack.blit(creer_joueur(192, k), (k * 192, 0))
-    pygame.image.save(feuille_jack, FICHIER_JACK)
-    print("Ecrit :", FICHIER_JACK)

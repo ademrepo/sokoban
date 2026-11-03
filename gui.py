@@ -308,7 +308,6 @@ class Game:
         self.pop_caisse = None          # (case, moment) d'une caisse qui vient d'arriver sur une cible : elle fait "pop"
         self.dernier_rebond = -1        # numero du dernier rebond de joie (pour lancer les etincelles une fois par rebond)
         self.anim_direction = (0, 0)
-        self.regarde_gauche = False     # le chat est dessine tourne vers la gauche
         self.action_en_attente = None   # touche appuyee pendant une animation : jouee juste apres
         self.annuler_solution()
         pygame.display.set_caption("Sokoban - Niveau " + str(numero + 1))
@@ -577,16 +576,25 @@ class Game:
                 return k
         return 0
 
-    def image_joueur(self, direction, queue, perso=None):
-        # Image du personnage. direction = (ligne, colonne) du dernier deplacement ; queue = 0 (normal) ou 1, 2
-        # (le chat remue la queue, le pingouin se dandine). Le chat n'a qu'une image (retournee pour aller a gauche) ;
-        # le pingouin a une image par direction : face, droite, dos, gauche.
+    def image_joueur(self, direction, queue, perso=None, pas=0):
+        # Image du personnage. direction = (ligne, colonne) du dernier deplacement ; queue = 0 (normal), 1 ou 2
+        # (le chat remue la queue de face, le pingouin se dandine), 3 (le chat est content).
+        # Les deux personnages ont une image par direction : face, droite, dos, gauche.
         if perso is None:
             perso = self.personnage
         if perso == "jack":
-            if queue == 0:
-                return self.sprites["joueur"]
-            return self.sprites["joueur_queue" + str(queue)]
+            # Jack a une image par direction, et 4 images de marche (pas = 0 a 3) vers la gauche et la droite.
+            if direction[1] > 0:
+                return self.sprites["jack_droite" + str(pas)]
+            if direction[1] < 0:
+                return self.sprites["jack_gauche" + str(pas)]
+            if direction[0] < 0:
+                return self.sprites["jack_dos"]
+            if queue == 3:
+                return self.sprites["jack_content"]
+            if queue > 0:
+                return self.sprites["jack_queue" + str(queue)]
+            return self.sprites["jack_face"]
         image = self.sprites["pingu_face"]
         if direction[1] > 0:
             image = self.sprites["pingu_droite"]
@@ -613,8 +621,6 @@ class Game:
         # On ne re-ecrit AUCUNE regle ici : on demande a successorFunction la liste des coups possibles
         # et on prend celui qui correspond a la touche. Le reste ne sert qu'a l'animation.
         dr, dc = ACTIONS[action]
-        if dc != 0:
-            self.regarde_gauche = dc < 0
         ancien = self.etat
         self.anim_debut = pygame.time.get_ticks()
         self.anim_direction = (dr, dc)
@@ -1216,9 +1222,11 @@ class Game:
         r, c = self.etat.player_pos
         x, y = self.ecran_case(r, c)
         saut = 0
+        pas = 0        # image de la marche (0 a 3)
         if self.anim_joueur is not None and self.anim_joueur[1] == (r, c) and self.en_mouvement():
             t = (pygame.time.get_ticks() - self.anim_debut) / float(DUREE_MOUVEMENT)
             if self.anim_joueur[0] != self.anim_joueur[1]:
+                pas = min(3, int(t * 4))
                 x, y = self.glisser(self.anim_joueur[0], self.anim_joueur[1], self.avancement())
                 saut = int(math.sin(math.pi * t) * 6)
             else:
@@ -1226,7 +1234,7 @@ class Game:
                 x = x + int(self.anim_direction[1] * choc)
                 y = y + int(self.anim_direction[0] * choc)
 
-        image = self.image_joueur(self.anim_direction, 0)
+        image = self.image_joueur(self.anim_direction, 0, None, pas)
         if not self.en_mouvement():
             # A l'arret, le chat respire (il monte et descend d'un pixel) et remue la queue de temps en temps.
             maintenant = pygame.time.get_ticks()
@@ -1238,8 +1246,6 @@ class Game:
     def poser_chat(self, image, x, y, saut):
         # Dessine le chat dans la case dont le coin haut gauche est (x, y), tourne du bon cote,
         # avec son ombre sous les pattes (plus petite quand il est en l'air, saut = hauteur du saut).
-        if self.regarde_gauche and self.personnage == "jack":
-            image = pygame.transform.flip(image, True, False)
         self.dessiner_ombre(x + TAILLE // 2, y + TAILLE - 4, max(10, TAILLE * 2 // 3 - saut))
         # Le chat est plus haut qu'une case : on aligne ses pieds sur le bas de la case.
         self.monde.blit(image, (x + (TAILLE - image.get_width()) // 2, y + TAILLE - image.get_height() - saut))
@@ -1277,7 +1283,10 @@ class Game:
             # et lance des etincelles a chaque rebond.
             maintenant = pygame.time.get_ticks()
             saut = saut + int(abs(math.sin(maintenant / 200.0)) * 18)
-            image = self.image_joueur(direction, 1 + (maintenant // 150) % 2)
+            if self.personnage == "jack":
+                image = self.image_joueur(direction, 3)
+            else:
+                image = self.image_joueur(direction, 1 + (maintenant // 150) % 2)
             rebond = int(maintenant / 628.0)
             if rebond != self.dernier_rebond:
                 self.dernier_rebond = rebond
@@ -1285,9 +1294,7 @@ class Game:
         else:
             saut = saut + int(abs(math.sin(ecoule / 90.0)) * 4)
             direction = (chemin[suivante][0] - chemin[i][0], chemin[suivante][1] - chemin[i][1])
-            if direction[1] != 0:
-                self.regarde_gauche = direction[1] < 0
-            image = self.image_joueur(direction, 0)
+            image = self.image_joueur(direction, 0, None, int(rang * 4) % 4)
         self.poser_chat(image, x, y, saut)
 
     def dessiner_lumiere(self, ecoule):
@@ -1410,9 +1417,7 @@ class Game:
         direction = (0, 1)
         if math.cos(phase) < 0:
             direction = (0, -1)
-        chat = self.image_joueur(direction, 0)
-        if direction[1] < 0 and self.personnage == "jack":
-            chat = pygame.transform.flip(chat, True, False)      # il regarde du cote ou il va
+        chat = self.image_joueur(direction, 0, None, int(maintenant / 110.0) % 4)
         self.dessiner_ombre_ecran(int(x), sol - 2, 28)
         self.ecran.blit(chat, (int(x) - chat.get_width() // 2, sol - chat.get_height() - int(saut)))
 
