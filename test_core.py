@@ -4,7 +4,8 @@
 from sokoban import SokobanPuzzle
 from node import Node
 from search import BFS
-from astar import AStar, h1, h2, h3
+from astar import AStar, AStarDeadlock, h1, h2, h3
+from sokoban import est_coin_deadlock, is_deadlock
 from levels import LEVELS
 
 
@@ -162,8 +163,8 @@ def test_bfs_resout_tous_les_niveaux():
     # On verifie aussi le cout : ce sont les couts minimaux, confirmes par un autre solveur (log session 13).
     # Les steps (noeuds developpes) sont toujours les memes, car les successeurs sont toujours
     # generes dans le meme ordre : si ces nombres changent, c'est que le BFS a ete modifie.
-    couts_optimaux = [4, 35, 36, 30, 28, 2, 5, 10]
-    steps_attendus = [11, 1806, 6013, 6051, 11659, 3, 12, 571]
+    couts_optimaux = [4, 35, 36, 30, 28, 2, 5, 10, 16, 14]
+    steps_attendus = [11, 1806, 6013, 6051, 11659, 3, 12, 571, 7611, 6618]
     for i in range(len(LEVELS)):
         niveau = LEVELS[i]
         etat = SokobanPuzzle(niveau["grid"])
@@ -222,11 +223,11 @@ def test_astar_sans_solution():
 def test_astar_resout_tous_les_niveaux():
     # A* avec chacune des 3 heuristiques trouve le meme cout optimal que le BFS, et la solution rejouee mene au but.
     # Steps attendus (noeuds developpes) : si ces nombres changent, c'est que A* ou une heuristique a change.
-    couts_optimaux = [4, 35, 36, 30, 28, 2, 5, 10]
+    couts_optimaux = [4, 35, 36, 30, 28, 2, 5, 10, 16, 14]
     steps_attendus = {
-        "h1": [11, 1827, 5984, 5475, 10190, 3, 15, 606],
-        "h2": [8, 1400, 3126, 3023, 2980, 3, 12, 131],
-        "h3": [5, 979, 2777, 2577, 2241, 3, 9, 89],
+        "h1": [11, 1827, 5984, 5475, 10190, 3, 15, 606, 3926, 5396],
+        "h2": [8, 1400, 3126, 3023, 2980, 3, 12, 131, 127, 303],
+        "h3": [5, 979, 2777, 2577, 2241, 3, 9, 89, 93, 190],
     }
     heuristiques = {"h1": h1, "h2": h2, "h3": h3}
     for nom in heuristiques:
@@ -242,6 +243,45 @@ def test_astar_resout_tous_les_niveaux():
                     if a == action:
                         courant = suivant
             assert courant.isGoal(), nom + " " + LEVELS[i]["name"]
+
+
+def test_deadlock_coin():
+    # Caisse hors cible dans un angle : perdue. Sur une cible : pas perdue.
+    etat = SokobanPuzzle(["OOOOO", "OB  O", "O   O", "O  SO", "OOOOO"])
+    assert est_coin_deadlock(etat.grid, 1, 1)
+    assert is_deadlock(etat)
+    etat = SokobanPuzzle(["OOOOO", "O  SO", "O   O", "O  BO", "OOOOO"])
+    assert est_coin_deadlock(etat.grid, 3, 3)
+    etat = SokobanPuzzle(["OOOOO", "O*  O", "O   O", "O   O", "OOOOO"])
+    assert not est_coin_deadlock(etat.grid, 1, 1)
+    assert not is_deadlock(etat)
+
+
+def test_deadlock_ligne():
+    # Caisse le long d'un mur, sans cible sur toute la ligne : perdue.
+    etat = SokobanPuzzle(["OOOOO", "O B O", "O   O", "OS  O", "OOOOO"])
+    assert is_deadlock(etat)
+    # Meme ligne avec une cible dessus : la caisse peut glisser jusqu'a la cible.
+    etat = SokobanPuzzle(["OOOOO", "O BSO", "O   O", "O   O", "OOOOO"])
+    assert not is_deadlock(etat)
+    # Le mur s'arrete : la caisse peut sortir de la ligne.
+    etat = SokobanPuzzle(["OOO O", "O B O", "O   O", "OS  O", "OOOOO"])
+    assert not is_deadlock(etat)
+    # Caisse au milieu de la salle : pas perdue.
+    etat = SokobanPuzzle(["OOOOO", "OR  O", "O B O", "O S O", "OOOOO"])
+    assert not is_deadlock(etat)
+
+
+def test_astar_deadlock_tous_les_niveaux():
+    # AStarDeadlock garde le cout optimal du BFS (il ne perd jamais la solution) et ne developpe pas plus de noeuds.
+    couts_optimaux = [4, 35, 36, 30, 28, 2, 5, 10, 16, 14]
+    for i in range(len(LEVELS)):
+        etat = SokobanPuzzle(LEVELS[i]["grid"])
+        sans, steps_sans = AStar(etat, lambda s: s.successorFunction(), lambda s: s.isGoal(), h3)
+        avec, steps_avec = AStarDeadlock(etat, lambda s: s.successorFunction(), lambda s: s.isGoal(), h3)
+        assert avec is not None, LEVELS[i]["name"]
+        assert avec.g == couts_optimaux[i], LEVELS[i]["name"]
+        assert steps_avec <= steps_sans, LEVELS[i]["name"]
 
 
 if __name__ == "__main__":
@@ -267,4 +307,7 @@ if __name__ == "__main__":
     test_astar_etat_initial_deja_but()
     test_astar_sans_solution()
     test_astar_resout_tous_les_niveaux()
+    test_deadlock_coin()
+    test_deadlock_ligne()
+    test_astar_deadlock_tous_les_niveaux()
     print("Tous les tests sont passes.")

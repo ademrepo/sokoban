@@ -3,6 +3,7 @@
 #   (le nombre de noeuds developpes, steps, est plus petit)
 import heapq
 from node import Node
+from sokoban import is_deadlock
 
 def positions(etat, symboles):
     # Retourne la liste des positions (ligne, colonne) des cases dont le symbole est dans symboles.
@@ -115,3 +116,15 @@ def AStar(s, successorsFn, isGoal, h):
                     ouvertF[enfant.state] = enfant.f
 
     return None, steps
+
+
+def AStarDeadlock(s, successorsFn, isGoal, h):
+    # Meme A* que ci-dessus, mais les successeurs qui sont un deadlock (caisse perdue) sont ignores :
+    # ils n'entrent jamais dans Open. On garde AStar intact : on filtre simplement la liste des successeurs.
+    def sans_deadlock(etat):
+        liste = []
+        for action, successeur in successorsFn(etat):
+            if not is_deadlock(successeur):
+                liste.append((action, successeur))
+        return liste
+    return AStar(s, sans_deadlock, isGoal, h)

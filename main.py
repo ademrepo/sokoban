@@ -3,6 +3,8 @@
 #         python main.py --niveau N -> ouvre directement le niveau numero N (1 a 8)
 #         python main.py --console -> mode console : BFS sur tous les niveaux
 #         python main.py --compare -> mode console : BFS et A* (h1, h2, h3) sur tous les niveaux, tableau de comparaison
+#                                     puis tableau A* sans / avec detection de deadlock
+#         python main.py --deadlock -> mode console : seulement le tableau A* sans / avec detection de deadlock
 
 import sys
 import time
@@ -10,7 +12,7 @@ import time
 from levels import LEVELS
 from sokoban import SokobanPuzzle
 from search import BFS
-from astar import AStar, h1, h2, h3
+from astar import AStar, AStarDeadlock, h1, h2, h3
 from gui import Game
 
 
@@ -59,9 +61,28 @@ def mode_comparaison():
         print()
 
 
+def mode_deadlock():
+    # Compare A* sans et avec elagage des deadlocks sur les niveaux Deadlock 1 et 2 (et sur les autres, pour verifier
+    # que le cout reste le meme). Gain = part des noeuds developpes qu'on ne developpe plus.
+    print("A* sans / avec detection de deadlock")
+    print("Niveau".ljust(11) + "Algo".ljust(8) + "Cout".rjust(5) + "Steps sans".rjust(12) + "Steps avec".rjust(12) + "Gain".rjust(8))
+    for niveau in LEVELS:
+        for nom, h in [("A* h1", h1), ("A* h2", h2), ("A* h3", h3)]:
+            etat = SokobanPuzzle(niveau["grid"])
+            sans, steps_sans = AStar(etat, lambda st: st.successorFunction(), lambda st: st.isGoal(), h)
+            avec, steps_avec = AStarDeadlock(etat, lambda st: st.successorFunction(), lambda st: st.isGoal(), h)
+            gain = 100.0 * (steps_sans - steps_avec) / steps_sans
+            print(niveau["name"].ljust(11) + nom.ljust(8) + str(avec.g).rjust(5) + str(steps_sans).rjust(12)
+                  + str(steps_avec).rjust(12) + ("%.1f %%" % gain).rjust(8))
+        print()
+
+
 def main():
     if "--compare" in sys.argv:
         mode_comparaison()
+        mode_deadlock()
+    elif "--deadlock" in sys.argv:
+        mode_deadlock()
     elif "--console" in sys.argv:
         mode_console()
     else:

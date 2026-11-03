@@ -1,6 +1,6 @@
 # Niveaux du jeu : liste de dictionnaires {"name": ..., "grid": [...]}.
 # Les 5 premiers niveaux sont transcrits depuis la Figure 4 (Exemples 1 a 5) de l'enonce.
-# Les 3 derniers sont des niveaux maison, simples a moyens.
+# Maison 1 a 3 sont des niveaux maison, simples a moyens ; Deadlock 1 et 2 servent a la partie D (caisses perdues).
 # Symboles : R=joueur, O=mur, ' '=case vide, S=case cible, B=caisse,
 #            .=joueur sur case cible, *=caisse sur case cible.
 
@@ -104,6 +104,31 @@ LEVELS = [
             "OS   SO",
             "O     O",
             "OOOOOOO",
+        ],
+    },
+    {
+        "name": "Deadlock 1",
+        "grid": [
+            "OOOOOO",
+            "O    O",
+            "OS B O",
+            "OS B O",
+            "OS B O",
+            "O    O",
+            "O R  O",
+            "OOOOOO",
+        ],
+    },
+    {
+        "name": "Deadlock 2",
+        "grid": [
+            "OOOOOOOOO",
+            "O  SSS  O",
+            "O       O",
+            "O  BBB  O",
+            "OOO   OOO",
+            "O   R   O",
+            "OOOOOOOOO",
         ],
     },
 ]
