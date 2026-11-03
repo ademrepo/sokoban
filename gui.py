@@ -82,6 +82,7 @@ COULEUR_ETOILE = (255, 215, 70)
 COULEUR_ETOILE_VIDE = (110, 80, 50)
 
 # Effets du decor vivant.
+NOMBRE_PETALES = 14      # petales de fleurs qui flottent dans l'air
 NOMBRE_LUCIOLES = 18
 DUREE_PARTICULE = 700    # duree de vie d'une etincelle ou d'un grain de poussiere, en millisecondes
 
@@ -97,6 +98,11 @@ def touche_le_sol(grille, r, c):
                 if grille[nr][nc] != "O":
                     return True
     return False
+
+
+def est_sol(grille, r, c):
+    # Vrai si la case (r, c) est dans la grille et n'est pas un mur.
+    return 0 <= r < len(grille) and 0 <= c < len(grille[r]) and grille[r][c] != "O"
 
 
 def creer_halo(rayon, couleur, opacite):
@@ -174,6 +180,11 @@ class Game:
         self.lucioles = []
         for k in range(NOMBRE_LUCIOLES):
             self.lucioles.append((hasard.uniform(0, largeur), hasard.uniform(0, hauteur), hasard.uniform(0.6, 1.4), hasard.uniform(0, 6.28)))
+        hasard_petales = random.Random(11)
+        self.petales = []      # (x, y, vitesse en x, vitesse en y, decalage) de chaque petale
+        for k in range(NOMBRE_PETALES):
+            self.petales.append((hasard_petales.uniform(0, largeur), hasard_petales.uniform(0, hauteur),
+                                 hasard_petales.uniform(12, 30), hasard_petales.uniform(10, 24), hasard_petales.uniform(0, 6.28)))
         self.polices = {}     # polices deja creees, rangees par taille (voir ecrire)
         self.vignette = creer_vignette(largeur, hauteur)
         self.etoiles = {}         # meilleur nombre d'etoiles par niveau (numero -> 0 a 3), garde pendant la session
@@ -240,10 +251,11 @@ class Game:
 
         # Pancarte "Bravo" (au milieu de la zone de jeu) et ses trois boutons, a leur place finale.
         centre_x = largeur // 2
-        self.pancarte = pygame.Rect(centre_x - 230, hauteur // 2 - 120, 460, 240)
-        self.bouton_rejouer = pygame.Rect(centre_x - 215, hauteur // 2 + 45, 130, 42)
-        self.bouton_suivant = pygame.Rect(centre_x - 75, hauteur // 2 + 45, 170, 42)
-        self.bouton_menu_bravo = pygame.Rect(centre_x + 105, hauteur // 2 + 45, 110, 42)
+        # La pancarte est a droite du niveau, pour qu'on voie le personnage sauter de joie devant la porte.
+        self.pancarte = pygame.Rect(largeur - 318, hauteur // 2 - 160, 300, 310)
+        self.bouton_rejouer = pygame.Rect(largeur - 288, hauteur // 2 + 5, 240, 40)
+        self.bouton_suivant = pygame.Rect(largeur - 288, hauteur // 2 + 55, 240, 40)
+        self.bouton_menu_bravo = pygame.Rect(largeur - 288, hauteur // 2 + 105, 240, 40)
 
         # Le niveau est dessine sur "monde", puis recopie sur l'ecran (pratique pour faire glisser).
         self.monde = pygame.Surface((largeur, hauteur))
@@ -265,8 +277,11 @@ class Game:
         self.etat = SokobanPuzzle(self.niveau["grid"])
         self.porte = self.trouver_porte()
         # Position du coin haut gauche du niveau dans la zone de jeu, en cases (niveau centre).
-        self.decalage_colonne = (self.cases_largeur - len(self.etat.grid[0])) // 2
-        self.decalage_ligne = (self.cases_hauteur - len(self.etat.grid)) // 2
+        # Le niveau est centre au pixel pres : le decalage peut valoir une demi-case (ligne0 et colonne0 : partie entiere).
+        self.decalage_colonne = (self.cases_largeur - len(self.etat.grid[0])) / 2.0
+        self.decalage_ligne = (self.cases_hauteur - len(self.etat.grid)) / 2.0
+        self.colonne0 = int(self.decalage_colonne)
+        self.ligne0 = int(self.decalage_ligne)
         self.preparer_fond()
         # Phase : "menu" (choix du niveau), "jeu", puis la fin de niveau : "ouverture" (porte + lumiere),
         # "marche" et "queue" (le chat va a la porte), "bravo" (pancarte), "glisse" (vers le niveau suivant).
@@ -290,6 +305,8 @@ class Game:
         self.anim_debut = -DUREE_MOUVEMENT
         self.anim_joueur = None
         self.anim_caisse = None
+        self.pop_caisse = None          # (case, moment) d'une caisse qui vient d'arriver sur une cible : elle fait "pop"
+        self.dernier_rebond = -1        # numero du dernier rebond de joie (pour lancer les etincelles une fois par rebond)
         self.anim_direction = (0, 0)
         self.regarde_gauche = False     # le chat est dessine tourne vers la gauche
         self.action_en_attente = None   # touche appuyee pendant une animation : jouee juste apres
@@ -570,18 +587,18 @@ class Game:
             if queue == 0:
                 return self.sprites["joueur"]
             return self.sprites["joueur_queue" + str(queue)]
-        if queue > 0:
-            face = self.sprites["pingu_face"]
-            if queue == 2:
-                return pygame.transform.flip(face, True, False)
-            return face
+        image = self.sprites["pingu_face"]
         if direction[1] > 0:
-            return self.sprites["pingu_droite"]
-        if direction[1] < 0:
-            return self.sprites["pingu_gauche"]
-        if direction[0] < 0:
-            return self.sprites["pingu_dos"]
-        return self.sprites["pingu_face"]
+            image = self.sprites["pingu_droite"]
+        elif direction[1] < 0:
+            image = self.sprites["pingu_gauche"]
+        elif direction[0] < 0:
+            image = self.sprites["pingu_dos"]
+        if queue == 1:
+            return pygame.transform.rotate(image, 8)       # il se dandine : penche d'un cote, puis de l'autre
+        if queue == 2:
+            return pygame.transform.rotate(image, -8)
+        return image
 
     def changer_page(self, sens):
         # Passe a la page d'avant (-1) ou d'apres (1) : la carte choisie garde la meme place sur l'autre page.
@@ -610,6 +627,7 @@ class Game:
                 self.coups = self.coups + 1
                 arrivee = suivant.player_pos
                 self.anim_joueur = (ancien.player_pos, arrivee)
+                self.ajouter_particules(ancien.player_pos, 3, (225, 220, 195), 35)     # petit nuage de poussiere
                 # Si une caisse etait sur la case d'arrivee, c'est qu'elle a ete poussee d'une case.
                 case = ancien.grid[arrivee[0]][arrivee[1]]
                 if case == "B" or case == "*":
@@ -619,6 +637,7 @@ class Game:
                     self.ajouter_particules(arrivee, 5, (200, 190, 160), 60)
                     if suivant.grid[caisse[0]][caisse[1]] == "*":
                         self.ajouter_particules(caisse, 16, (255, 220, 90), 180)
+                        self.pop_caisse = (caisse, pygame.time.get_ticks() + DUREE_MOUVEMENT)
                 if self.son_actif and "pas" in self.sons:
                     self.sons["pas"].play()
                 return
@@ -890,12 +909,17 @@ class Game:
     def case_libre(self, wr, wc):
         # Vrai si la case (wr, wc) de la zone de jeu est de l'herbe visible : hors du niveau, ou case de mur
         # qui ne touche pas le sol (donc non dessinee). On peut y poser du decor.
+        # Le niveau peut etre decale d'une demi-case : une case de la zone recouvre alors deux cases du niveau,
+        # on regarde les deux (si le decalage est entier, elles sont identiques).
         grille = self.etat.grid
-        r = wr - self.decalage_ligne
-        c = wc - self.decalage_colonne
-        if r < 0 or r >= len(grille) or c < 0 or c >= len(grille[r]):
-            return True
-        return grille[r][c] == "O" and not touche_le_sol(grille, r, c)
+        lignes = [int(math.floor(wr - self.decalage_ligne)), int(math.ceil(wr - self.decalage_ligne))]
+        colonnes = [int(math.floor(wc - self.decalage_colonne)), int(math.ceil(wc - self.decalage_colonne))]
+        for r in lignes:
+            for c in colonnes:
+                if 0 <= r < len(grille) and 0 <= c < len(grille[r]):
+                    if not (grille[r][c] == "O" and not touche_le_sol(grille, r, c)):
+                        return False
+        return True
 
     def dessiner_cible(self, x, y, allumee):
         # La cible est une plaque de pierre carree avec un contour dore (dessinee avec pygame.draw,
@@ -964,20 +988,20 @@ class Game:
         # On essaie a 3 cases de la porte, sinon a 2 cases (niveaux etroits).
         if self.porte is not None:
             # Les cases au-dessus de la porte sont reservees a son arche (dessinee plus tard).
-            for dc in (-1, 0, 1):
-                self.cases_decor.append((self.porte[0] + self.decalage_ligne - 1, self.porte[1] + self.decalage_colonne + dc))
+            for dc in (-1, 0, 1, 2):
+                self.cases_decor.append((self.porte[0] + self.ligne0 - 1, self.porte[1] + self.colonne0 + dc))
             for sens in (-1, 1):
                 for distance in (3, 2):
                     colonne = self.porte[1] + sens * distance
                     if self.mur_visible(self.porte[0], colonne):
-                        self.poser("totem", self.porte[0] + self.decalage_ligne - 1, colonne + self.decalage_colonne)
+                        self.poser("totem", self.porte[0] + self.ligne0 - 1, colonne + self.colonne0)
                         break
 
         # Sous le niveau : un banc au milieu, des vases a gauche, des tonneaux a droite.
         grille = self.etat.grid
-        bas = min(self.decalage_ligne + len(grille), bas_fenetre)
-        gauche = self.decalage_colonne
-        droite = self.decalage_colonne + len(grille[0]) - 1
+        bas = min(self.ligne0 + len(grille), bas_fenetre)
+        gauche = self.colonne0
+        droite = self.colonne0 + len(grille[0]) - 1
         self.poser("banc", bas, (gauche + droite) // 2)
         self.poser("vase", bas, gauche)
         self.poser("pot", bas, gauche + 1)
@@ -1059,10 +1083,26 @@ class Game:
                 x, y = self.ecran_case(r, c)
                 if grille[r][c] == "O":
                     if touche_le_sol(grille, r, c):
-                        self.monde.blit(self.sprites["mur" + str(1 + (r + c) % 2)], (x, y))
+                        if est_sol(grille, r + 1, c):
+                            # Du sol juste en dessous : on voit la face du mur (briques), parfois avec une fenetre.
+                            face = "mur" + str(1 + (r + c) % 2)
+                            loin_de_la_porte = self.porte is None or abs(c - self.porte[1]) > 1
+                            if (r * 5 + c * 3) % 7 == 0 and loin_de_la_porte:
+                                face = "mur_fenetre"
+                            self.monde.blit(self.sprites[face], (x, y))
+                        else:
+                            # Sinon on ne voit que le dessus du mur (pierres claires).
+                            self.monde.blit(self.sprites["mur_cap"], (x, y))
                 else:
                     # Toutes les autres cases sont du sol de jeu (dalle de pierre) ; l'herbe reste a l'exterieur.
                     self.monde.blit(self.sprites["sol" + str(1 + (r * 3 + c * 5) % 2)], (x, y))
+                    # Ombre douce du mur au-dessus, a gauche et a droite.
+                    if not est_sol(grille, r - 1, c):
+                        self.monde.blit(self.sprites["ombre_nord"], (x, y))
+                    if not est_sol(grille, r, c - 1):
+                        self.monde.blit(self.sprites["ombre_ouest"], (x, y))
+                    if not est_sol(grille, r, c + 1):
+                        self.monde.blit(self.sprites["ombre_est"], (x + TAILLE - self.sprites["ombre_est"].get_width(), y))
         self.fond = self.monde.copy()
 
     def dessiner_niveau(self):
@@ -1090,13 +1130,24 @@ class Game:
                     if self.anim_caisse is not None and self.anim_caisse[1] == (r, c):
                         x, y = self.glisser(self.anim_caisse[0], self.anim_caisse[1], self.avancement())
                     self.dessiner_ombre(x + TAILLE // 2 + 3, y + TAILLE - 3, TAILLE - 4)
-                    self.monde.blit(self.sprites["caisse"], (x, y))
+                    image = self.sprites["caisse"]
+                    bx = x
+                    by = y
+                    if self.pop_caisse is not None and self.pop_caisse[0] == (r, c):
+                        age = pygame.time.get_ticks() - self.pop_caisse[1]
+                        if 0 <= age < 350:
+                            # La caisse grossit un instant puis reprend sa taille.
+                            cote = int(TAILLE * (1 + 0.22 * math.sin(math.pi * age / 350.0)))
+                            image = pygame.transform.smoothscale(image, (cote, cote))
+                            bx = x - (cote - TAILLE) // 2
+                            by = y - (cote - TAILLE)
+                    self.monde.blit(image, (bx, by))
                     if case == "*":
                         # Caisse bien placee : contour vert, pour la reperer de loin.
                         pygame.draw.rect(self.monde, COULEUR_BON, (x, y, TAILLE, TAILLE), 3, 6)
 
         # Le chat par-dessus (pendant la marche vers la porte, il est dessine a part, voir plus bas).
-        if self.phase != "marche" and self.phase != "queue":
+        if self.phase != "marche" and self.phase != "queue" and self.phase != "bravo":
             self.dessiner_chat()
 
         # Porte de sortie, dessinee par-dessus le mur choisi (fermee, puis ouverte avec de la lumiere derriere).
@@ -1110,7 +1161,7 @@ class Game:
             self.monde.blit(sprite, (x, y))
 
         # Le chat qui marche vers la porte, puis remue la queue devant (par-dessus la porte et l'arche).
-        if self.phase == "marche" or self.phase == "queue":
+        if self.phase == "marche" or self.phase == "queue" or self.phase == "bravo":
             self.dessiner_chat_sortie()
 
         self.dessiner_effets()
@@ -1138,6 +1189,16 @@ class Game:
             eclat = (math.sin(t * 2.5) + 1) / 2
             self.lueur.set_alpha(int(60 + 195 * eclat))
             self.monde.blit(self.lueur, (int(x) - 10, int(y) - 10))
+
+        # Petales : ils descendent en se balancant, et reviennent par l'autre cote quand ils sortent.
+        largeur = self.monde.get_width()
+        hauteur = self.monde.get_height()
+        secondes = maintenant / 1000.0
+        for (x0, y0, vx, vy, decalage) in self.petales:
+            x = (x0 + vx * secondes + math.sin(secondes * 1.3 + decalage) * 25) % largeur
+            y = (y0 + vy * secondes) % hauteur
+            pygame.draw.ellipse(self.monde, (255, 180, 205), (int(x), int(y), 7, 4))
+            pygame.draw.ellipse(self.monde, (255, 225, 235), (int(x) + 1, int(y), 3, 2))
 
     def ecran_case(self, r, c):
         # Coin haut gauche (en pixels) de la case (r, c) du niveau ; r et c peuvent etre a virgule.
@@ -1189,7 +1250,7 @@ class Game:
         ecoule = pygame.time.get_ticks() - self.debut_phase
         chemin = self.chemin_chat
         rang = ecoule / float(DELAI_CASE)
-        if self.phase == "queue" or rang > len(chemin) - 1:
+        if self.phase != "marche" or rang > len(chemin) - 1:
             rang = len(chemin) - 1.0
         i = int(rang)
         suivante = min(i + 1, len(chemin) - 1)
@@ -1211,8 +1272,16 @@ class Game:
         saut = int(hauteur_a + (hauteur_b - hauteur_a) * avance)
 
         direction = (0, 0)
-        if self.phase == "queue":
-            image = self.image_joueur(direction, 1 + (ecoule // 150) % 2)
+        if self.phase != "marche":
+            # Arrive devant la porte : le personnage est content, il saute sur place (queue qui remue, ou dandinement)
+            # et lance des etincelles a chaque rebond.
+            maintenant = pygame.time.get_ticks()
+            saut = saut + int(abs(math.sin(maintenant / 200.0)) * 18)
+            image = self.image_joueur(direction, 1 + (maintenant // 150) % 2)
+            rebond = int(maintenant / 628.0)
+            if rebond != self.dernier_rebond:
+                self.dernier_rebond = rebond
+                self.ajouter_particules(chemin[-1], 8, (255, 225, 110), 120)
         else:
             saut = saut + int(abs(math.sin(ecoule / 90.0)) * 4)
             direction = (chemin[suivante][0] - chemin[i][0], chemin[suivante][1] - chemin[i][1])
@@ -1265,7 +1334,7 @@ class Game:
         self.ecrire_ombre("BRAVO !", 56, (255, 235, 170), planche.centerx, y + 12, True)
         self.ecrire_ombre(texte, 20, (255, 240, 200), planche.centerx, y + 80, True)
         if self.aide:
-            self.ecrire_ombre("Solution jouee par l'algorithme", 16, (130, 225, 255), planche.centerx, y + 116, True)
+            self.ecrire_ombre("Resolu par l algorithme", 16, (130, 225, 255), planche.centerx, y + 116, True)
         else:
             # Les etoiles apparaissent une par une en grossissant ; objectif = nombre de coups minimal.
             for k in range(3):
@@ -1454,6 +1523,9 @@ class Game:
         pygame.draw.rect(self.ecran, (72, 47, 26), (0, haut, largeur, HAUTEUR_BARRE))
         pygame.draw.line(self.ecran, (230, 200, 130), (0, haut), (largeur, haut), 3)
         pygame.draw.line(self.ecran, (120, 80, 40), (0, haut + 3), (largeur, haut + 3), 2)
+
+        for y in range(haut + 28, haut + HAUTEUR_BARRE, 28):
+            pygame.draw.line(self.ecran, (62, 40, 22), (0, y), (largeur, y), 2)       # joints des planches
 
         if self.phase == "accueil":
             self.ecrire_ombre("Accueil", 20, (255, 235, 170), 14, haut + 14)

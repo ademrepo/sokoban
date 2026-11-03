@@ -159,6 +159,31 @@ def load_sprites(taille):
     for nom in ("mur1", "mur2"):
         sprites[nom].fill(ECLAIRCIR_MUR, special_flags=pygame.BLEND_RGB_ADD)
 
+    # Dessus de mur ("chapeau") : la bande claire du haut des blocs, empilee en 2 rangees decalees (comme des pierres posees).
+    bande = mur.subsurface(pygame.Rect(32, 288, 64, 13))
+    bande = pygame.transform.scale(bande, (taille, taille // 2))
+    chapeau = pygame.Surface((taille, taille))
+    for k in range(2):
+        decalage = (k % 2) * (taille // 2)
+        chapeau.blit(bande, (decalage, k * (taille // 2)))
+        chapeau.blit(bande, (decalage - taille, k * (taille // 2)))
+    chapeau.fill(ECLAIRCIR_MUR, special_flags=pygame.BLEND_RGB_ADD)
+    sprites["mur_cap"] = chapeau
+    # Mur de brique avec une petite fenetre.
+    sprites["mur_fenetre"] = decouper(mur, 192, 192, 32, 64, taille)
+    sprites["mur_fenetre"].fill(ECLAIRCIR_MUR, special_flags=pygame.BLEND_RGB_ADD)
+
+    # Ombres douces posees sur le sol, le long des murs : de plus en plus transparentes en s'eloignant du mur.
+    epaisseur = taille // 3
+    sprites["ombre_nord"] = pygame.Surface((taille, epaisseur), pygame.SRCALPHA)
+    sprites["ombre_ouest"] = pygame.Surface((epaisseur // 2, taille), pygame.SRCALPHA)
+    for k in range(epaisseur):
+        alpha = int(110 * (1 - k / float(epaisseur)) ** 2)
+        pygame.draw.line(sprites["ombre_nord"], (0, 0, 0, alpha), (0, k), (taille, k))
+        if k < epaisseur // 2:
+            pygame.draw.line(sprites["ombre_ouest"], (0, 0, 0, alpha), (k, 0), (k, taille))
+    sprites["ombre_est"] = pygame.transform.flip(sprites["ombre_ouest"], True, False)
+
     props = charger_feuille("TX Props.png")
     sprites["caisse"] = decouper(props, 160, 18, 32, 23, taille)
 

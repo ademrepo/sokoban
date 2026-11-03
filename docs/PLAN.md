@@ -58,6 +58,8 @@ Troisième sujet : détection de deadlock + interface finale (demandé le 2026-1
 
 - [x] Étape 36 — Niveaux Deadlock 1 et 2 refaits par adem (Deadlock 2 en forme de L, lignes de longueurs différentes) : `SokobanPuzzle` complète les lignes courtes avec des murs, test et chiffres mis à jour — 2026-11-03 — docs/logs/2026-11-03_session-06.md
 
+- [x] Étape 37 — Interface : niveau centré au pixel près, pingouin sans clignotement de direction, saut de joie à la porte, murs avec face de brique ou dessus de pierre + ombres sur le sol, pétales, nuage de poussière, caisse qui fait « pop », pancarte à droite (`gui.py`, `assets_loader.py`) — 2026-11-03 — docs/logs/2026-11-03_session-07.md
+
 Correspondance avec les anciens numéros (avant la renumérotation du 2026-10-20, commit `4dc4589`) :
 
 | Nouveau | Ancien | Contenu |
