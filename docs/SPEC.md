@@ -242,3 +242,6 @@ Le sujet de la partie 2 ajoute à l'énoncé de la partie 1 (les §1 à 6 ci-des
 - Heuristiques (dans `astar.py`) : `h1` = nombre de caisses hors cible ; `h2` = 2*h1 + somme des distances de Manhattan caisse → cible libre la plus proche ; `h3` (proposée) = h2 + distance de Manhattan joueur → caisse hors cible la plus proche − 1 (le joueur doit aller jusqu'à la caisse, et chaque déplacement coûte 1 ; même idée que « distance de l'agent au but » dans l'exemple du labyrinthe du cours). Sans détection de deadlock.
 - Test : comparer BFS, A* h1, h2, h3 sur les niveaux (`python main.py --compare`).
 - Interface (étape 30, faite) : boutons BFS / A* h1 / h2 / h3 (touches B, 1, 2, 3) qui lancent l'algorithme et jouent la solution ; bouton « Comparer » (touche C) qui affiche coût, steps et temps des 4 algorithmes.
+
+Mise à jour 2026-11-03 : détection de deadlock (coin + ligne) implémentée dans sokoban.py
+(is_deadlock) et astar.py (AStarDeadlock), conformément à la Partie D de l'énoncé.
