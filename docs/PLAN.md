@@ -56,6 +56,8 @@ Troisième sujet : détection de deadlock + interface finale (demandé le 2026-1
 
 - [x] Étape 35 — Interface : le chat saute par-dessus la caisse qui bloque la sortie ; choix du personnage (Jack le chat ou Pingu le pingouin, `pingu.png`) dans le menu ; tableau « Comparer » avec coût / steps / temps sans et avec deadlock ; bouton « Deadlock : oui / non » — 2026-11-03 — docs/logs/2026-11-03_session-05.md
 
+- [x] Étape 36 — Niveaux Deadlock 1 et 2 refaits par adem (Deadlock 2 en forme de L, lignes de longueurs différentes) : `SokobanPuzzle` complète les lignes courtes avec des murs, test et chiffres mis à jour — 2026-11-03 — docs/logs/2026-11-03_session-06.md
+
 Correspondance avec les anciens numéros (avant la renumérotation du 2026-10-20, commit `4dc4589`) :
 
 | Nouveau | Ancien | Contenu |

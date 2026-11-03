@@ -150,7 +150,8 @@ class Game:
         lignes_max = 0
         for niveau in LEVELS:
             lignes_max = max(lignes_max, len(niveau["grid"]))
-            colonnes_max = max(colonnes_max, len(niveau["grid"][0]))
+            for ligne in niveau["grid"]:
+                colonnes_max = max(colonnes_max, len(ligne))
         self.cases_largeur = colonnes_max + 2 * MARGE_X
         self.cases_hauteur = lignes_max + 2 * MARGE_Y
         largeur = self.cases_largeur * TAILLE
@@ -1385,8 +1386,11 @@ class Game:
 
             # Apercu du niveau a gauche de la carte, centre dans un carre de 76 x 76.
             grille = LEVELS[i]["grid"]
-            cote = 76 // max(len(grille), len(grille[0]))
-            self.dessiner_apercu(grille, carte.x + 10 + (76 - cote * len(grille[0])) // 2, carte.y + 12 + (76 - cote * len(grille)) // 2, cote)
+            largeur_grille = 0
+            for ligne in grille:
+                largeur_grille = max(largeur_grille, len(ligne))
+            cote = 76 // max(len(grille), largeur_grille)
+            self.dessiner_apercu(grille, carte.x + 10 + (76 - cote * largeur_grille) // 2, carte.y + 12 + (76 - cote * len(grille)) // 2, cote)
             self.ecrire_ombre(str(i + 1), 30, (255, 225, 120), carte.x + 98, carte.y + 8)
             self.ecrire_ombre(LEVELS[i]["name"], 16, (255, 245, 215), carte.x + 98, carte.y + 44)
             # Etoiles gagnees (grises tant que le niveau n'est pas reussi).

@@ -62,18 +62,27 @@ def test_pousser_caisse_hors_d_une_cible():
 
 
 def test_niveaux_bien_formes():
-    # Chaque niveau : un seul joueur, autant de caisses que de cibles, lignes de meme largeur,
-    # et des murs sur tout le bord (le joueur ne peut pas sortir de la grille).
+    # Chaque niveau : un seul joueur, autant de caisses que de cibles, et des murs sur tout le bord
+    # (le joueur ne peut pas sortir de la grille). Les lignes peuvent etre plus courtes que la plus longue
+    # (niveau en forme de L) : SokobanPuzzle les complete avec des murs (verifie plus bas).
     for niveau in LEVELS:
         grille = niveau["grid"]
         texte = "".join(grille)
         assert texte.count("R") + texte.count(".") == 1, niveau["name"]
         assert texte.count("B") + texte.count("*") == texte.count("S") + texte.count("*") + texte.count("."), niveau["name"]
         for ligne in grille:
-            assert len(ligne) == len(grille[0]), niveau["name"]
             assert ligne[0] == "O" and ligne[-1] == "O", niveau["name"]
-        assert grille[0] == "O" * len(grille[0]) and grille[-1] == "O" * len(grille[0]), niveau["name"]
+        assert grille[0] == "O" * len(grille[0]) and grille[-1] == "O" * len(grille[-1]), niveau["name"]
+        etat = SokobanPuzzle(grille)
+        for ligne in etat.grid:
+            assert len(ligne) == len(etat.grid[0]), niveau["name"]
 
+
+def test_lignes_de_longueurs_differentes():
+    # Une ligne courte est completee avec des murs a droite.
+    etat = SokobanPuzzle(["OOO", "ORBSO", "OOOOO"])
+    assert etat.grid == ("OOOOO", "ORBSO", "OOOOO")
+    assert etat.player_pos == (1, 1)
 
 def test_is_goal_faux_au_depart_vrai_sur_plateau_resolu():
     etat_depart = SokobanPuzzle(["OOOO", "ORBS", "OOOO"])
@@ -163,8 +172,8 @@ def test_bfs_resout_tous_les_niveaux():
     # On verifie aussi le cout : ce sont les couts minimaux, confirmes par un autre solveur (log session 13).
     # Les steps (noeuds developpes) sont toujours les memes, car les successeurs sont toujours
     # generes dans le meme ordre : si ces nombres changent, c'est que le BFS a ete modifie.
-    couts_optimaux = [4, 35, 36, 30, 28, 2, 5, 10, 16, 14]
-    steps_attendus = [11, 1806, 6013, 6051, 11659, 3, 12, 571, 7611, 6618]
+    couts_optimaux = [4, 35, 36, 30, 28, 2, 5, 10, 41, 55]
+    steps_attendus = [11, 1806, 6013, 6051, 11659, 3, 12, 571, 2307, 54726]
     for i in range(len(LEVELS)):
         niveau = LEVELS[i]
         etat = SokobanPuzzle(niveau["grid"])
@@ -223,11 +232,11 @@ def test_astar_sans_solution():
 def test_astar_resout_tous_les_niveaux():
     # A* avec chacune des 3 heuristiques trouve le meme cout optimal que le BFS, et la solution rejouee mene au but.
     # Steps attendus (noeuds developpes) : si ces nombres changent, c'est que A* ou une heuristique a change.
-    couts_optimaux = [4, 35, 36, 30, 28, 2, 5, 10, 16, 14]
+    couts_optimaux = [4, 35, 36, 30, 28, 2, 5, 10, 41, 55]
     steps_attendus = {
-        "h1": [11, 1827, 5984, 5475, 10190, 3, 15, 606, 3926, 5396],
-        "h2": [8, 1400, 3126, 3023, 2980, 3, 12, 131, 127, 303],
-        "h3": [5, 979, 2777, 2577, 2241, 3, 9, 89, 93, 190],
+        "h1": [11, 1827, 5984, 5475, 10190, 3, 15, 606, 2312, 54670],
+        "h2": [8, 1400, 3126, 3023, 2980, 3, 12, 131, 2233, 49669],
+        "h3": [5, 979, 2777, 2577, 2241, 3, 9, 89, 2121, 48442],
     }
     heuristiques = {"h1": h1, "h2": h2, "h3": h3}
     for nom in heuristiques:
@@ -274,7 +283,7 @@ def test_deadlock_ligne():
 
 def test_astar_deadlock_tous_les_niveaux():
     # AStarDeadlock garde le cout optimal du BFS (il ne perd jamais la solution) et ne developpe pas plus de noeuds.
-    couts_optimaux = [4, 35, 36, 30, 28, 2, 5, 10, 16, 14]
+    couts_optimaux = [4, 35, 36, 30, 28, 2, 5, 10, 41, 55]
     for i in range(len(LEVELS)):
         etat = SokobanPuzzle(LEVELS[i]["grid"])
         sans, steps_sans = AStar(etat, lambda s: s.successorFunction(), lambda s: s.isGoal(), h3)
@@ -292,6 +301,7 @@ if __name__ == "__main__":
     test_marcher_sur_cible_et_la_quitter()
     test_pousser_caisse_hors_d_une_cible()
     test_niveaux_bien_formes()
+    test_lignes_de_longueurs_differentes()
     test_is_goal_faux_au_depart_vrai_sur_plateau_resolu()
     test_is_goal_faux_au_depart_pour_tous_les_niveaux()
     test_position_du_joueur_coherente()

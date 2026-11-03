@@ -375,7 +375,7 @@ Lecture : h1 est trop faible (presque comme ne pas avoir d'heuristique : A* ≈ 
 | Exemple 3 | 2777 | 1010 | 63,6 % |
 | Exemple 4 | 2577 | 861 | 66,6 % |
 | Exemple 5 | 2241 | 1122 | 49,9 % |
-| Deadlock 1 | 93 | 79 | 15,1 % |
-| Deadlock 2 | 190 | 186 | 2,1 % |
+| Deadlock 1 | 2121 | 982 | 53,7 % |
+| Deadlock 2 | 48442 | 5525 | 88,6 % |
 
-Lecture : le gain est grand quand l'heuristique est faible ou quand le niveau offre beaucoup de mauvaises poussées (avec h1 sur Deadlock 1 : 3926 → 862, soit 78 %). Sur Deadlock 1 et 2, h3 est déjà bonne, donc il reste peu à élaguer. Le tableau complet : `python main.py --deadlock`. Dans l'interface : bouton « Deadlock » (touche D) qui allume la détection pour les boutons A*, tableau « Comparer » avec une colonne sans et une colonne avec deadlock (et des barres), et tableau de tous les niveaux avec les colonnes h1+DL, h2+DL, h3+DL.
+Lecture : le gain est grand quand l'heuristique est faible ou quand le niveau offre beaucoup de mauvaises poussées (avec h1 sur Deadlock 2 : 54670 → 6413, soit 88 %). Les niveaux Deadlock 1 et 2 sont faits pour ça : beaucoup de pièges, donc beaucoup de noeuds évités. Le tableau complet : `python main.py --deadlock`. Dans l'interface : bouton « Deadlock » (touche D) qui allume la détection pour les boutons A*, tableau « Comparer » avec une colonne sans et une colonne avec deadlock (et des barres), et tableau de tous les niveaux avec les colonnes h1+DL, h2+DL, h3+DL.

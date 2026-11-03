@@ -17,7 +17,12 @@ class SokobanPuzzle:
         # On stocke la grille sous forme de tuple de chaînes (immuable, donc hashable).
         # player_pos : position du joueur si on la connaît déjà (c'est le cas pour un successeur :
         # on vient de le déplacer). Sinon (niveau de départ), on la cherche une seule fois dans la grille.
-        self.grid = tuple(grid)
+        # Les lignes peuvent avoir des longueurs differentes (un niveau en forme de L, par exemple) :
+        # on complete les lignes courtes avec des murs 'O', donc le reste du code voit une grille rectangulaire.
+        largeur = 0
+        for ligne in grid:
+            largeur = max(largeur, len(ligne))
+        self.grid = tuple(ligne.ljust(largeur, "O") for ligne in grid)
         if player_pos is None:
             player_pos = self.trouver_joueur()
         self.player_pos = player_pos
