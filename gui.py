@@ -20,7 +20,7 @@ import pygame
 from levels import LEVELS
 from sokoban import SokobanPuzzle, ACTIONS
 from astar import h1, h2, h3
-from solveur import resoudre
+from search import resoudre
 from assets_loader import load_sprites, load_sounds
 
 TAILLE = 44            # taille d'une case en pixels

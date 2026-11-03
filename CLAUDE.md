@@ -70,9 +70,8 @@ docs/                      PDFs, SPEC.md, PLAN.md, logs/, EXPLICATIONS.md (last 
 assets/                    itch.io pack "Pixel Art Top Down - Basic v1.2.3" (do not modify)
 sokoban.py                 class SokobanPuzzle (state + rules)
 node.py                    class Node (state, parent, action, g, getPath, getSolution)
-search.py                  function BFS (course pseudocode, Fig. 1.19)
+search.py                  function BFS (course pseudocode, Fig. 1.19) + resoudre(etat, h, deadlock): runs BFS / A* / A* with deadlock pruning, returns (node, steps, time)
 astar.py                   function AStar + h1, h2, h3, AStarDeadlock (Fig. 1.29)
-solveur.py                 resoudre(etat, h, deadlock): runs BFS / A* / A* with deadlock pruning, returns (node, steps, time)
 levels.py                  levels (list of dicts name + grid of strings)
 assets_loader.py           sprite loading/cutting
 gui.py                     Pygame interface (class Game)

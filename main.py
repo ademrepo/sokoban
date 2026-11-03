@@ -11,7 +11,7 @@ import sys
 from levels import LEVELS
 from sokoban import SokobanPuzzle
 from astar import h1, h2, h3
-from solveur import resoudre
+from search import resoudre
 
 
 def mode_console():
