@@ -15,6 +15,8 @@ DOSSIER = os.path.join(DOSSIER_PROJET, "assets", "Pixel Art Top Down - Basic v1.
 DOSSIER_OMBRES = DOSSIER + "Extra/"   # memes feuilles, mais avec les ombres au sol
 
 # Pour rendre l'herbe aussi vive que dans l'apercu du pack (on ajoute ces valeurs R, V, B a chaque pixel).
+FICHIER_JACK = os.path.join(DOSSIER_PROJET, "assets", "jack.png")
+
 ECLAIRCIR_HERBE = (30, 32, 0)
 ECLAIRCIR_MUR = (45, 38, 28)
 
@@ -187,9 +189,18 @@ def load_sprites(taille):
     props = charger_feuille("TX Props.png")
     sprites["caisse"] = decouper(props, 160, 18, 32, 23, taille)
 
-    sprites["joueur"] = creer_joueur(taille, 0)
-    sprites["joueur_queue1"] = creer_joueur(taille, 1)    # positions de la queue qui bouge
-    sprites["joueur_queue2"] = creer_joueur(taille, 2)
+    # Jack le chat : on charge assets/jack.png (3 images cote a cote, la queue dans 3 positions) ;
+    # s'il manque, on le dessine par code (voir creer_joueur). Pour le refaire : python assets_loader.py
+    noms_jack = ["joueur", "joueur_queue1", "joueur_queue2"]
+    if os.path.exists(FICHIER_JACK):
+        feuille_jack = pygame.image.load(FICHIER_JACK).convert_alpha()
+        largeur_image = feuille_jack.get_width() // 3
+        for k in range(3):
+            morceau = feuille_jack.subsurface(pygame.Rect(k * largeur_image, 0, largeur_image, feuille_jack.get_height()))
+            sprites[noms_jack[k]] = pygame.transform.smoothscale(morceau, (taille, int(taille * 1.2)))
+    else:
+        for k in range(3):
+            sprites[noms_jack[k]] = creer_joueur(taille, k)
 
     # Decor autour du niveau : feuilles "avec ombres", proportions gardees (on fixe la hauteur).
     props_ombres = charger_feuille("TX Props with Shadow.png", DOSSIER_OMBRES)
@@ -291,3 +302,12 @@ def load_sounds():
     sons["ambiance"].set_volume(0.35)
     sons["pas"].set_volume(0.5)
     return sons
+
+
+if __name__ == "__main__":
+    # Enregistre le chat dans assets/jack.png : 3 images de 192 x 230 pixels, une par position de la queue.
+    feuille_jack = pygame.Surface((192 * 3, 230), pygame.SRCALPHA)
+    for k in range(3):
+        feuille_jack.blit(creer_joueur(192, k), (k * 192, 0))
+    pygame.image.save(feuille_jack, FICHIER_JACK)
+    print("Ecrit :", FICHIER_JACK)
