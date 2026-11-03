@@ -45,6 +45,7 @@ DUREE_OUVERTURE = 1200   # la porte s'ouvre, la lumiere apparait
 DELAI_CASE = 170         # le chat marche jusqu'a la porte : temps pour traverser une case
 DUREE_QUEUE = 1600       # le chat remue la queue devant la porte
 DUREE_PANCARTE = 600     # la pancarte "Bravo" descend (ensuite elle attend un clic sur un bouton)
+HAUTEUR_SAUT = 40         # hauteur du chat quand il saute par-dessus une caisse, en pixels
 DUREE_GLISSE = 900       # le glissement vers le niveau suivant
 
 # La porte est ouverte (et la lumiere allumee) pendant toutes ces phases.
@@ -57,6 +58,8 @@ ALGOS = [("BFS", None), ("A* h1", h1), ("A* h2", h2), ("A* h3", h3)]
 # "+DL" = A* qui ignore les etats deadlock (caisses perdues).
 ALGOS_TOUS = [("BFS", None, False), ("A* h1", h1, False), ("A* h2", h2, False), ("A* h3", h3, False),
               ("h1+DL", h1, True), ("h2+DL", h2, True), ("h3+DL", h3, True)]
+# Personnages au choix dans le menu : (nom affiche, cle).
+PERSONNAGES = [("Jack", "jack"), ("Pingu", "pingu")]
 COULEUR_DL = (140, 240, 150)       # vert : tout ce qui concerne la detection de deadlock
 COULEUR_SANS_DL = (255, 200, 80)   # dore : sans detection
 
@@ -177,6 +180,7 @@ class Game:
         self.fin_message = 0
         self.debut_fondu = 0      # moment ou l'ecran actuel a commence a apparaitre
         self.debut_comparaison = 0
+        self.personnage = "jack"     # "jack" (le chat) ou "pingu" (le pingouin), au choix dans le menu
 
         # Sons : dictionnaire vide si l'ordinateur n'a pas de carte son (le jeu marche quand meme).
         self.sons = load_sounds()
@@ -187,16 +191,16 @@ class Game:
         # Premiere ligne : un bouton par algorithme, le bouton Deadlock (allume / eteint), puis "Comparer".
         self.boutons_algos = []
         for k in range(len(ALGOS)):
-            self.boutons_algos.append(pygame.Rect(largeur - 590 + k * 86, hauteur + 24, 80, 38))
-        self.bouton_deadlock = pygame.Rect(largeur - 590 + len(ALGOS) * 86 + 6, hauteur + 24, 110, 38)
+            self.boutons_algos.append(pygame.Rect(largeur - 630 + k * 86, hauteur + 24, 80, 38))
+        self.bouton_deadlock = pygame.Rect(largeur - 630 + len(ALGOS) * 86 + 6, hauteur + 24, 150, 38)
         self.bouton_comparer = pygame.Rect(largeur - 124, hauteur + 24, 104, 38)
         # Deuxieme ligne : annuler, recommencer, menu, puis pause et vitesse de la lecture automatique.
-        self.bouton_annuler = pygame.Rect(largeur - 582, hauteur + 76, 100, 38)
-        self.bouton_recommencer = pygame.Rect(largeur - 476, hauteur + 76, 130, 38)
-        self.bouton_menu = pygame.Rect(largeur - 340, hauteur + 76, 76, 38)
-        self.bouton_pause = pygame.Rect(largeur - 258, hauteur + 76, 100, 38)
-        self.bouton_moins = pygame.Rect(largeur - 152, hauteur + 76, 40, 38)
-        self.bouton_plus = pygame.Rect(largeur - 106, hauteur + 76, 40, 38)
+        self.bouton_annuler = pygame.Rect(largeur - 536, hauteur + 76, 100, 38)
+        self.bouton_recommencer = pygame.Rect(largeur - 430, hauteur + 76, 130, 38)
+        self.bouton_menu = pygame.Rect(largeur - 294, hauteur + 76, 76, 38)
+        self.bouton_pause = pygame.Rect(largeur - 212, hauteur + 76, 100, 38)
+        self.bouton_moins = pygame.Rect(largeur - 106, hauteur + 76, 40, 38)
+        self.bouton_plus = pygame.Rect(largeur - 60, hauteur + 76, 40, 38)
         self.deadlock = False         # vrai : les A* ignorent les etats deadlock
         self.comparaison = []         # lignes du tableau "Comparer" : listes de colonnes (vide = tableau cache)
         self.note_comparaison = ""    # phrase sous le tableau
@@ -215,11 +219,15 @@ class Game:
             colonne = i % COLONNES_MENU
             ligne = i // COLONNES_MENU
             x = largeur // 2 - 446 + colonne * 226
-            y = 140 + ligne * 112
-            self.boutons_niveaux.append(pygame.Rect(x, y, 214, 100))
+            y = 140 + ligne * 106
+            self.boutons_niveaux.append(pygame.Rect(x, y, 214, 96))
         self.choix_menu = 0     # carte selectionnee (souris ou fleches du clavier)
-        self.bouton_page_avant = pygame.Rect(largeur // 2 - 130, hauteur - 58, 90, 34)
-        self.bouton_page_apres = pygame.Rect(largeur // 2 + 40, hauteur - 58, 90, 34)
+        self.bouton_page_avant = pygame.Rect(largeur // 2 + 180, hauteur - 58, 90, 34)
+        self.bouton_page_apres = pygame.Rect(largeur // 2 + 370, hauteur - 58, 90, 34)
+        # Choix du personnage : un bouton par personnage, en bas a gauche du menu.
+        self.boutons_perso = []
+        for k in range(len(PERSONNAGES)):
+            self.boutons_perso.append(pygame.Rect(largeur // 2 - 290 + k * 160, hauteur - 66, 150, 48))
 
         # Ecran d'accueil : trois gros boutons.
         self.bouton_jouer = pygame.Rect(largeur // 2 - 150, 210, 300, 56)
@@ -444,9 +452,9 @@ class Game:
         # Allume ou eteint la detection de deadlock pour les boutons A* (le BFS ne l'utilise pas).
         self.deadlock = not self.deadlock
         if self.deadlock:
-            self.afficher_message("Deadlock allume : les caisses perdues sont ignorees")
+            self.afficher_message("Deadlock : oui - les A* ignorent les caisses perdues")
         else:
-            self.afficher_message("Deadlock eteint")
+            self.afficher_message("Deadlock : non - A* normal")
 
     def changer_vitesse(self, sens):
         # sens = 1 : plus rapide ; sens = -1 : plus lent (DELAIS_PAS va du plus lent au plus rapide).
@@ -511,6 +519,8 @@ class Game:
                 self.ouvrir_accueil()
             if evenement.key == pygame.K_s:
                 self.changer_son()
+            if evenement.key == pygame.K_TAB:
+                self.personnage = PERSONNAGES[(self.personnage_numero() + 1) % len(PERSONNAGES)][1]
             if evenement.unicode.isdigit():
                 numero = int(evenement.unicode) - 1
                 if 0 <= numero < len(LEVELS):
@@ -534,10 +544,43 @@ class Game:
             for k in range(PAR_PAGE):
                 if debut + k < len(LEVELS) and self.boutons_niveaux[k].collidepoint(evenement.pos):
                     self.charger_niveau(debut + k)
+            for k in range(len(PERSONNAGES)):
+                if self.boutons_perso[k].collidepoint(evenement.pos):
+                    self.personnage = PERSONNAGES[k][1]
             if self.bouton_page_avant.collidepoint(evenement.pos):
                 self.changer_page(-1)
             if self.bouton_page_apres.collidepoint(evenement.pos):
                 self.changer_page(1)
+
+    def personnage_numero(self):
+        # Position du personnage choisi dans PERSONNAGES.
+        for k in range(len(PERSONNAGES)):
+            if PERSONNAGES[k][1] == self.personnage:
+                return k
+        return 0
+
+    def image_joueur(self, direction, queue, perso=None):
+        # Image du personnage. direction = (ligne, colonne) du dernier deplacement ; queue = 0 (normal) ou 1, 2
+        # (le chat remue la queue, le pingouin se dandine). Le chat n'a qu'une image (retournee pour aller a gauche) ;
+        # le pingouin a une image par direction : face, droite, dos, gauche.
+        if perso is None:
+            perso = self.personnage
+        if perso == "jack":
+            if queue == 0:
+                return self.sprites["joueur"]
+            return self.sprites["joueur_queue" + str(queue)]
+        if queue > 0:
+            face = self.sprites["pingu_face"]
+            if queue == 2:
+                return pygame.transform.flip(face, True, False)
+            return face
+        if direction[1] > 0:
+            return self.sprites["pingu_droite"]
+        if direction[1] < 0:
+            return self.sprites["pingu_gauche"]
+        if direction[0] < 0:
+            return self.sprites["pingu_dos"]
+        return self.sprites["pingu_face"]
 
     def changer_page(self, sens):
         # Passe a la page d'avant (-1) ou d'apres (1) : la carte choisie garde la meme place sur l'autre page.
@@ -660,20 +703,20 @@ class Game:
             self.resultat = nom + " : cout " + str(noeud.g) + " | " + str(steps) + " steps | " + "%.3f" % duree + " s"
 
     def comparer(self):
-        # Tableau de la position actuelle : pour chaque algorithme, le resultat SANS puis AVEC detection de deadlock.
-        # Ligne = [algo, cout, steps, temps, steps avec DL, temps avec DL, gain] ; le BFS n'a pas de version DL.
+        # Tableau de la position actuelle : pour chaque algorithme, cout / steps / temps SANS puis AVEC detection de deadlock.
+        # Ligne = [algo, cout, steps, temps, cout DL, steps DL, temps DL, gain] ; le BFS n'a pas de version DL.
         # self.barres = (steps sans, steps avec ou None) de chaque ligne, pour dessiner les barres.
         self.annuler_solution()
         self.afficher_calcul()
         self.debut_comparaison = pygame.time.get_ticks()
-        self.comparaison = [["Algo", "Cout", "Steps", "Temps", "Steps + DL", "Temps + DL", "Gain"]]
+        self.comparaison = [["Algo", "Cout", "Steps", "Temps", "Cout", "Steps", "Temps", "Gain"]]
         self.barres = []
         for nom, h in ALGOS:
             noeud, steps, duree = self.lancer(self.etat, h, False)
             cout = "-"
             if noeud is not None:
                 cout = str(noeud.g)
-            ligne = [nom, cout, str(steps), "%.3f s" % duree, "-", "-", "-"]
+            ligne = [nom, cout, str(steps), "%.3f s" % duree, "-", "-", "-", "-"]
             avec = None
             if h is not None:
                 noeud_dl, steps_dl, duree_dl = self.lancer(self.etat, h, True)
@@ -681,12 +724,14 @@ class Game:
                 gain = 0.0
                 if steps > 0:
                     gain = 100.0 * (steps - steps_dl) / steps
-                ligne[4] = str(steps_dl)
-                ligne[5] = "%.3f s" % duree_dl
-                ligne[6] = "%.1f %%" % gain
+                if noeud_dl is not None:
+                    ligne[4] = str(noeud_dl.g)
+                ligne[5] = str(steps_dl)
+                ligne[6] = "%.3f s" % duree_dl
+                ligne[7] = "%.1f %%" % gain
             self.comparaison.append(ligne)
             self.barres.append((steps, avec))
-        self.note_comparaison = "DL = detection de deadlock : les etats avec une caisse perdue sont ignores"
+        self.note_comparaison = "Gain = part des steps en moins avec la detection de deadlock (meme cout optimal)"
 
     def comparer_tous_les_niveaux(self):
         # Ecran d'accueil : les 7 colonnes de ALGOS_TOUS sur chaque niveau (une seule fois, le resultat est garde).
@@ -773,28 +818,48 @@ class Game:
                 self.ancien_monde = None
 
     def chemin_vers_porte(self):
-        # Chemin (liste de cases) du chat jusqu'a la case juste devant la porte, en evitant murs et caisses.
-        # C'est un petit parcours en largeur sur les cases, pour l'animation seulement : ce n'est
-        # pas un coup du jeu, donc ni les coups ni le cout du BFS ne changent.
+        # Chemin (liste de cases) du chat jusqu'a la case juste devant la porte.
+        # On essaie d'abord en evitant murs et caisses ; si une caisse bloque la sortie, on refait le chemin en
+        # laissant passer sur les caisses : le chat sautera par-dessus (voir dessiner_chat_sortie).
+        # Si la caisse est juste devant la porte, le chemin finit sur la porte elle-meme : il saute et entre.
+        # C'est pour l'animation seulement : ce n'est pas un coup du jeu, donc ni les coups ni le cout ne changent.
         grille = self.etat.grid
         depart = self.etat.player_pos
         if self.porte is None:
             return [depart]
         arrivee = (self.porte[0] + 1, self.porte[1])
+        chemin = self.parcours(depart, arrivee, False)
+        if chemin is None:
+            chemin = self.parcours(depart, arrivee, True)
+        if chemin is None:
+            return [depart]          # porte inaccessible : le chat reste ou il est
+        if self.est_caisse(arrivee):
+            chemin.append(self.porte)
+        return chemin
 
+    def est_caisse(self, case):
+        # Vrai s'il y a une caisse (sur une cible ou non) sur la case (ligne, colonne).
+        symbole = self.etat.grid[case[0]][case[1]]
+        return symbole == "B" or symbole == "*"
+
+    def parcours(self, depart, arrivee, saute):
+        # Parcours en largeur sur les cases du depart a l'arrivee. Les murs bloquent toujours ;
+        # les caisses bloquent sauf si saute est vrai. Retourne la liste des cases, ou None.
+        grille = self.etat.grid
         parent = {depart: None}
         file = deque([depart])
         while len(file) > 0:
             r, c = file.popleft()
             for dr, dc in ((-1, 0), (1, 0), (0, -1), (0, 1)):
                 voisine = (r + dr, c + dc)
-                case = grille[voisine[0]][voisine[1]]
-                if voisine not in parent and case != "O" and case != "B" and case != "*":
-                    parent[voisine] = (r, c)
-                    file.append(voisine)
-
+                if voisine in parent or grille[voisine[0]][voisine[1]] == "O":
+                    continue
+                if self.est_caisse(voisine) and not saute:
+                    continue
+                parent[voisine] = (r, c)
+                file.append(voisine)
         if arrivee not in parent:
-            return [depart]          # porte inaccessible : le chat reste ou il est
+            return None
         chemin = []
         case = arrivee
         while case is not None:
@@ -1099,21 +1164,21 @@ class Game:
                 x = x + int(self.anim_direction[1] * choc)
                 y = y + int(self.anim_direction[0] * choc)
 
-        image = self.sprites["joueur"]
+        image = self.image_joueur(self.anim_direction, 0)
         if not self.en_mouvement():
             # A l'arret, le chat respire (il monte et descend d'un pixel) et remue la queue de temps en temps.
             maintenant = pygame.time.get_ticks()
             y = y + int(round(math.sin(maintenant / 350.0)))
             if maintenant % 4000 < 600:
-                image = self.sprites["joueur_queue" + str(1 + (maintenant // 150) % 2)]
+                image = self.image_joueur(self.anim_direction, 1 + (maintenant // 150) % 2)
         self.poser_chat(image, x, y, saut)
 
     def poser_chat(self, image, x, y, saut):
         # Dessine le chat dans la case dont le coin haut gauche est (x, y), tourne du bon cote,
         # avec son ombre sous les pattes (plus petite quand il est en l'air, saut = hauteur du saut).
-        if self.regarde_gauche:
+        if self.regarde_gauche and self.personnage == "jack":
             image = pygame.transform.flip(image, True, False)
-        self.dessiner_ombre(x + TAILLE // 2, y + TAILLE - 4, TAILLE * 2 // 3 - saut * 2)
+        self.dessiner_ombre(x + TAILLE // 2, y + TAILLE - 4, max(10, TAILLE * 2 // 3 - saut))
         # Le chat est plus haut qu'une case : on aligne ses pieds sur le bas de la case.
         self.monde.blit(image, (x + (TAILLE - image.get_width()) // 2, y + TAILLE - image.get_height() - saut))
 
@@ -1129,14 +1194,30 @@ class Game:
         suivante = min(i + 1, len(chemin) - 1)
         x, y = self.glisser(chemin[i], chemin[suivante], rang - i)
 
-        image = self.sprites["joueur"]
-        saut = 0
+        # Saut par-dessus une caisse : le chat monte a la hauteur HAUTEUR_SAUT en arrivant sur la case d'une caisse,
+        # reste en l'air au-dessus d'elle, puis redescend a la case suivante.
+        hauteur_a = 0
+        hauteur_b = 0
+        if self.est_caisse(chemin[i]):
+            hauteur_a = HAUTEUR_SAUT
+        if self.est_caisse(chemin[suivante]):
+            hauteur_b = HAUTEUR_SAUT
+        avance = rang - i
+        if hauteur_b > hauteur_a:
+            avance = math.sin(avance * math.pi / 2)         # il s'elance : monte vite puis ralentit
+        elif hauteur_b < hauteur_a:
+            avance = 1 - math.cos(avance * math.pi / 2)     # il retombe : de plus en plus vite
+        saut = int(hauteur_a + (hauteur_b - hauteur_a) * avance)
+
+        direction = (0, 0)
         if self.phase == "queue":
-            image = self.sprites["joueur_queue" + str(1 + (ecoule // 150) % 2)]
+            image = self.image_joueur(direction, 1 + (ecoule // 150) % 2)
         else:
-            saut = int(abs(math.sin(ecoule / 90.0)) * 4)
-            if chemin[suivante][1] != chemin[i][1]:
-                self.regarde_gauche = chemin[suivante][1] < chemin[i][1]
+            saut = saut + int(abs(math.sin(ecoule / 90.0)) * 4)
+            direction = (chemin[suivante][0] - chemin[i][0], chemin[suivante][1] - chemin[i][1])
+            if direction[1] != 0:
+                self.regarde_gauche = direction[1] < 0
+            image = self.image_joueur(direction, 0)
         self.poser_chat(image, x, y, saut)
 
     def dessiner_lumiere(self, ecoule):
@@ -1256,8 +1337,11 @@ class Game:
         phase = maintenant / 900.0
         x = largeur // 2 + math.sin(phase) * 70
         saut = abs(math.sin(maintenant / 110.0)) * 5
-        chat = self.sprites["joueur"]
+        direction = (0, 1)
         if math.cos(phase) < 0:
+            direction = (0, -1)
+        chat = self.image_joueur(direction, 0)
+        if direction[1] < 0 and self.personnage == "jack":
             chat = pygame.transform.flip(chat, True, False)      # il regarde du cote ou il va
         self.dessiner_ombre_ecran(int(x), sol - 2, 28)
         self.ecran.blit(chat, (int(x) - chat.get_width() // 2, sol - chat.get_height() - int(saut)))
@@ -1312,11 +1396,30 @@ class Game:
                     couleur = COULEUR_ETOILE
                 dessiner_etoile(self.ecran, carte.x + 108 + e * 26, carte.y + 78, 9, couleur)
 
+        # Choix du personnage : le bouton du personnage actuel est doré.
+        self.ecrire_ombre("Personnage :", 18, (255, 240, 200), largeur // 2 - 446, hauteur - 54)
+        for k in range(len(PERSONNAGES)):
+            bouton = self.boutons_perso[k]
+            choisi = PERSONNAGES[k][1] == self.personnage
+            fond = (120, 78, 38)
+            bord = (200, 160, 100)
+            if choisi:
+                fond = (175, 120, 65)
+                bord = (255, 225, 120)
+            elif bouton.collidepoint(pygame.mouse.get_pos()):
+                fond = (150, 100, 52)
+            pygame.draw.rect(self.ecran, (60, 38, 18), bouton.move(0, 4), 0, 10)
+            pygame.draw.rect(self.ecran, fond, bouton, 0, 10)
+            pygame.draw.rect(self.ecran, bord, bouton, 3, 10)
+            image = self.image_joueur((0, 0), 0, PERSONNAGES[k][1])
+            self.ecran.blit(image, (bouton.x + 12, bouton.bottom - 4 - image.get_height()))
+            self.ecrire_ombre(PERSONNAGES[k][0], 18, (255, 245, 215), bouton.x + 66, bouton.y + 14)
+
         # Boutons de page (seulement s'il y a plusieurs pages) et numero de la page.
         if nb_pages > 1:
             self.dessiner_bouton(self.bouton_page_avant, "<")
             self.dessiner_bouton(self.bouton_page_apres, ">")
-            self.ecrire_ombre(str(page + 1) + " / " + str(nb_pages), 18, (255, 240, 200), largeur // 2, self.bouton_page_avant.y + 8, True)
+            self.ecrire_ombre(str(page + 1) + " / " + str(nb_pages), 18, (255, 240, 200), largeur // 2 + 320, self.bouton_page_avant.y + 8, True)
 
     def dessiner_bouton(self, rectangle, texte, allume=False):
         # Bouton en bois avec un peu de relief : plus clair sous la souris, enfonce quand on clique.
@@ -1356,7 +1459,7 @@ class Game:
         if self.phase == "menu":
             self.ecrire_ombre("Menu", 20, (255, 235, 170), 14, haut + 14)
             self.ecrire_ombre("Clic, touche 1 a " + str(min(9, len(LEVELS))) + ", ou fleches + Entree", 16, (255, 245, 215), 14, haut + 50)
-            self.ecrire_ombre("S : son   Echap : accueil", 14, (220, 200, 170), 14, haut + 90)
+            self.ecrire_ombre("Tab : changer de personnage   S : son   Echap : accueil", 14, (220, 200, 170), 14, haut + 90)
             return
 
         # Texte a gauche : niveau, coups (et objectif), algorithme choisi, resultat.
@@ -1378,7 +1481,10 @@ class Game:
 
         for k in range(len(ALGOS)):
             self.dessiner_bouton(self.boutons_algos[k], ALGOS[k][0])
-        self.dessiner_bouton(self.bouton_deadlock, "Deadlock", self.deadlock)
+        if self.deadlock:
+            self.dessiner_bouton(self.bouton_deadlock, "Deadlock : oui", True)
+        else:
+            self.dessiner_bouton(self.bouton_deadlock, "Deadlock : non")
         self.dessiner_bouton(self.bouton_comparer, "Comparer")
         self.dessiner_bouton(self.bouton_annuler, "Annuler")
         self.dessiner_bouton(self.bouton_recommencer, "Recommencer")
@@ -1393,10 +1499,10 @@ class Game:
         self.ecran.blit(self.ecrire(aide, 12, (210, 185, 150)), (14, haut + HAUTEUR_BARRE - 18))
 
     def dessiner_comparaison(self):
-        # Tableau "Comparer" : une ligne par algorithme, SANS puis AVEC detection de deadlock, et deux barres
-        # sous chaque ligne A* (doree = sans deadlock, verte = avec) pour voir tout de suite la difference.
+        # Tableau "Comparer" : deux groupes de colonnes, SANS deadlock (dore) et AVEC deadlock (vert), chacun avec
+        # cout, steps et temps. Sous chaque ligne A*, deux barres de steps (doree = sans, verte = avec).
         largeur = self.monde.get_width()
-        planche = pygame.Rect(0, 0, 820, 80 + 46 * len(self.comparaison) + 78)
+        planche = pygame.Rect(0, 0, 920, 118 + 46 * (len(self.comparaison) - 1) + 96)
         planche.center = (largeur // 2, self.monde.get_height() // 2)
         self.dessiner_planche(planche, 12)
         self.ecrire_ombre("Comparaison - " + self.niveau["name"], 22, (255, 235, 170), planche.centerx, planche.y + 14, True)
@@ -1408,9 +1514,23 @@ class Game:
         croissance = min(1.0, (pygame.time.get_ticks() - self.debut_comparaison) / 600.0)
         longueur_max = planche.width - 48
 
-        milieux = [planche.x + 90, planche.x + 190, planche.x + 290, planche.x + 395, planche.x + 515, planche.x + 635, planche.x + 735]
+        # Colonnes : algo, puis 3 colonnes sans deadlock, 3 colonnes avec, puis le gain.
+        milieux = []
+        for decalage in (80, 195, 295, 395, 535, 635, 735, 850):
+            milieux.append(planche.x + decalage)
+
+        # Titres des deux groupes, soulignes de leur couleur.
+        y = planche.y + 52
+        self.ecrire_ombre("SANS deadlock", 17, COULEUR_SANS_DL, planche.x + 295, y, True)
+        self.ecrire_ombre("AVEC deadlock", 17, COULEUR_DL, planche.x + 635, y, True)
+        pygame.draw.line(self.ecran, COULEUR_SANS_DL, (planche.x + 150, y + 26), (planche.x + 440, y + 26), 4)
+        pygame.draw.line(self.ecran, COULEUR_DL, (planche.x + 490, y + 26), (planche.x + 780, y + 26), 4)
+
         for i in range(len(self.comparaison)):
-            y = planche.y + 56 + 46 * i
+            if i == 0:
+                y = planche.y + 90
+            else:
+                y = planche.y + 118 + 46 * (i - 1)
             for j in range(len(milieux)):
                 couleur = (255, 245, 215)
                 if i == 0:
@@ -1418,17 +1538,15 @@ class Game:
                 elif j >= 4:
                     couleur = COULEUR_DL
                 self.ecrire_ombre(self.comparaison[i][j], 17, couleur, milieux[j], y, True)
-            if i == 0:
-                pygame.draw.line(self.ecran, (85, 52, 25), (planche.x + 24, y + 28), (planche.right - 24, y + 28), 3)
-            else:
+            if i > 0:
                 sans, avec = self.barres[i - 1]
                 pygame.draw.rect(self.ecran, COULEUR_SANS_DL, (planche.x + 24, y + 26, max(2, int(longueur_max * sans / float(plus_grand) * croissance)), 6), 0, 3)
                 if avec is not None:
                     pygame.draw.rect(self.ecran, COULEUR_DL, (planche.x + 24, y + 33, max(2, int(longueur_max * avec / float(plus_grand) * croissance)), 6), 0, 3)
 
-        bas = planche.y + 56 + 46 * len(self.comparaison)
-        self.ecrire_ombre(self.note_comparaison, 14, (130, 225, 255), planche.centerx, bas + 6, True)
-        self.ecrire_ombre("barre doree : sans deadlock   barre verte : avec deadlock", 14, (230, 205, 160), planche.centerx, bas + 28, True)
+        bas = planche.y + 118 + 46 * (len(self.comparaison) - 1)
+        self.ecrire_ombre(self.note_comparaison, 14, (130, 225, 255), planche.centerx, bas + 4, True)
+        self.ecrire_ombre("barres : steps (doree = sans deadlock, verte = avec)", 14, (230, 205, 160), planche.centerx, bas + 26, True)
         self.ecrire_ombre("(une touche ou un clic pour fermer)", 13, (230, 205, 160), planche.centerx, planche.bottom - 26, True)
 
     def dessiner_tableau_global(self):

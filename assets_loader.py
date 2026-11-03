@@ -86,6 +86,53 @@ def creer_joueur(taille, queue):
     return image
 
 
+def charger_pingouin(sprites, hauteur_voulue):
+    # Pingouin de pingu.png : une feuille de 4 images (face, droite, dos, gauche) sur fond blanc.
+    # Le fond blanc est rendu transparent en partant des bords (le blanc du visage est entoure de noir : il reste).
+    chemin = os.path.join(DOSSIER_PROJET, "assets", "Pixel Art Top Down - Basic v1.2.3", "pingu.png")
+    feuille = pygame.image.load(chemin).convert_alpha()
+    largeur, haut = feuille.get_size()
+    a_voir = []
+    for x in range(largeur):
+        a_voir.append((x, 0))
+        a_voir.append((x, haut - 1))
+    for y in range(haut):
+        a_voir.append((0, y))
+        a_voir.append((largeur - 1, y))
+    while len(a_voir) > 0:
+        x, y = a_voir.pop()
+        if 0 <= x < largeur and 0 <= y < haut:
+            rouge, vert, bleu, alpha = feuille.get_at((x, y))
+            if alpha != 0 and rouge >= 235 and vert >= 235 and bleu >= 235:
+                feuille.set_at((x, y), (0, 0, 0, 0))
+                a_voir.extend([(x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)])
+
+    # Les 4 images sont separees par des colonnes vides : on repere chaque bloc de colonnes non vides.
+    blocs = []
+    debut = None
+    for x in range(largeur + 1):
+        plein = False
+        if x < largeur:
+            for y in range(haut):
+                if feuille.get_at((x, y))[3] > 0:
+                    plein = True
+                    break
+        if plein and debut is None:
+            debut = x
+        if not plein and debut is not None:
+            blocs.append((debut, x - debut))
+            debut = None
+
+    # Toutes les images sont reduites du meme facteur (la plus haute fait hauteur_voulue pixels).
+    noms = ["pingu_face", "pingu_droite", "pingu_dos", "pingu_gauche"]
+    facteur = hauteur_voulue / float(feuille.subsurface(pygame.Rect(blocs[0][0], 0, blocs[0][1], haut)).get_bounding_rect().height)
+    for k in range(4):
+        morceau = feuille.subsurface(pygame.Rect(blocs[k][0], 0, blocs[k][1], haut))
+        morceau = morceau.subsurface(morceau.get_bounding_rect())
+        taille = (int(morceau.get_width() * facteur), int(morceau.get_height() * facteur))
+        sprites[noms[k]] = pygame.transform.smoothscale(morceau, taille)
+
+
 def load_sprites(taille):
     # Charge les feuilles de sprites et retourne un dictionnaire d'images.
     # Doit etre appele apres pygame.display.set_mode (convert_alpha en a besoin).
@@ -157,6 +204,7 @@ def load_sprites(taille):
     structures = charger_feuille("TX Struct.png")
     sprites["arche_porte"] = decouper_hauteur(structures, 408, 27, 80, 64, taille * 2)
 
+    charger_pingouin(sprites, int(taille * 1.15))
     return sprites
 
 
