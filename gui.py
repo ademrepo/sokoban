@@ -25,8 +25,9 @@ from astar import AStar, AStarDeadlock, h1, h2, h3
 from assets_loader import load_sprites, load_sounds
 
 TAILLE = 44            # taille d'une case en pixels
-MARGE = 2              # marge autour du plus grand niveau, en nombre de cases (sert de decor)
-HAUTEUR_BARRE = 178    # hauteur de la barre d'infos en bas de la fenetre, en pixels
+MARGE_X = 7            # marge a gauche et a droite du plus grand niveau, en cases (sert de decor)
+MARGE_Y = 2            # marge en haut et en bas
+HAUTEUR_BARRE = 140    # hauteur de la barre d'infos en bas de la fenetre, en pixels
 # Couleurs de la cible : plaque de pierre avec un contour dore (plus brillant quand une caisse est dessus).
 COULEUR_PLAQUE = (120, 115, 105)
 COULEUR_CONTOUR = (205, 150, 50)
@@ -50,15 +51,23 @@ DUREE_GLISSE = 900       # le glissement vers le niveau suivant
 PHASES_PORTE_OUVERTE = ("ouverture", "marche", "queue", "bravo")
 
 # Les algorithmes proposes : (nom, heuristique, avec elagage des deadlocks) ; None = pas d'heuristique, c'est le BFS.
-ALGOS = [("BFS", None, False), ("A* h1", h1, False), ("A* h2", h2, False), ("A* h3", h3, False), ("A* DL", h3, True)]
+ALGOS = [("BFS", None), ("A* h1", h1), ("A* h2", h2), ("A* h3", h3)]
+
+# Colonnes du tableau de tous les niveaux : (nom, heuristique, avec elagage des deadlocks).
+# "+DL" = A* qui ignore les etats deadlock (caisses perdues).
+ALGOS_TOUS = [("BFS", None, False), ("A* h1", h1, False), ("A* h2", h2, False), ("A* h3", h3, False),
+              ("h1+DL", h1, True), ("h2+DL", h2, True), ("h3+DL", h3, True)]
+COULEUR_DL = (140, 240, 150)       # vert : tout ce qui concerne la detection de deadlock
+COULEUR_SANS_DL = (255, 200, 80)   # dore : sans detection
 
 # Temps entre deux pas quand le programme joue la solution tout seul, en millisecondes (du plus lent au plus rapide).
 # Les touches - et + changent de vitesse.
 DELAIS_PAS = [700, 450, 260, 150, 80, 40]
 VITESSE_DEPART = 2
 
-# Nombre de niveaux affiches par page dans le menu (2 colonnes de 4 cartes).
-PAR_PAGE = 8
+# Menu : 4 colonnes de 3 cartes = 12 niveaux par page (les boutons < > servent s'il y en a plus).
+COLONNES_MENU = 4
+PAR_PAGE = 12
 COULEUR_TRAJET = (90, 210, 255)
 
 # Fondu (ecran qui apparait en douceur), messages et confettis.
@@ -139,8 +148,8 @@ class Game:
         for niveau in LEVELS:
             lignes_max = max(lignes_max, len(niveau["grid"]))
             colonnes_max = max(colonnes_max, len(niveau["grid"][0]))
-        self.cases_largeur = colonnes_max + 2 * MARGE
-        self.cases_hauteur = lignes_max + 2 * MARGE
+        self.cases_largeur = colonnes_max + 2 * MARGE_X
+        self.cases_hauteur = lignes_max + 2 * MARGE_Y
         largeur = self.cases_largeur * TAILLE
         hauteur = self.cases_hauteur * TAILLE
 
@@ -174,21 +183,24 @@ class Game:
         self.son_actif = False
         self.changer_son()
 
-        # Les boutons de la barre d'infos (rectangles cliquables).
-        # Premiere ligne : un bouton par algorithme (BFS, A* h1, h2, h3, DL) puis "Comparer".
+        # Les boutons de la barre d'infos (rectangles cliquables), a droite du texte.
+        # Premiere ligne : un bouton par algorithme, le bouton Deadlock (allume / eteint), puis "Comparer".
         self.boutons_algos = []
         for k in range(len(ALGOS)):
-            self.boutons_algos.append(pygame.Rect(14 + k * 92, hauteur + 84, 86, 34))
-        self.bouton_comparer = pygame.Rect(14 + len(ALGOS) * 92, hauteur + 84, 100, 34)
+            self.boutons_algos.append(pygame.Rect(largeur - 590 + k * 86, hauteur + 24, 80, 38))
+        self.bouton_deadlock = pygame.Rect(largeur - 590 + len(ALGOS) * 86 + 6, hauteur + 24, 110, 38)
+        self.bouton_comparer = pygame.Rect(largeur - 124, hauteur + 24, 104, 38)
         # Deuxieme ligne : annuler, recommencer, menu, puis pause et vitesse de la lecture automatique.
-        self.bouton_annuler = pygame.Rect(14, hauteur + 124, 100, 34)
-        self.bouton_recommencer = pygame.Rect(120, hauteur + 124, 130, 34)
-        self.bouton_menu = pygame.Rect(256, hauteur + 124, 76, 34)
-        self.bouton_pause = pygame.Rect(342, hauteur + 124, 100, 34)
-        self.bouton_moins = pygame.Rect(450, hauteur + 124, 40, 34)
-        self.bouton_plus = pygame.Rect(496, hauteur + 124, 40, 34)
+        self.bouton_annuler = pygame.Rect(largeur - 582, hauteur + 76, 100, 38)
+        self.bouton_recommencer = pygame.Rect(largeur - 476, hauteur + 76, 130, 38)
+        self.bouton_menu = pygame.Rect(largeur - 340, hauteur + 76, 76, 38)
+        self.bouton_pause = pygame.Rect(largeur - 258, hauteur + 76, 100, 38)
+        self.bouton_moins = pygame.Rect(largeur - 152, hauteur + 76, 40, 38)
+        self.bouton_plus = pygame.Rect(largeur - 106, hauteur + 76, 40, 38)
+        self.deadlock = False         # vrai : les A* ignorent les etats deadlock
         self.comparaison = []         # lignes du tableau "Comparer" : listes de colonnes (vide = tableau cache)
-        self.note_comparaison = ""    # phrase sous le tableau (gain du deadlock)
+        self.note_comparaison = ""    # phrase sous le tableau
+        self.barres = []              # (steps sans, steps avec deadlock) de chaque ligne du tableau Comparer
         self.vitesse = VITESSE_DEPART # position dans DELAIS_PAS
         self.pause = False            # vrai : la lecture automatique est en pause
         self.algo_choisi = 0          # dernier algorithme lance (0 = BFS)
@@ -196,18 +208,18 @@ class Game:
         self.vue_globale = False      # vrai : le tableau de tous les niveaux est affiche
         self.vue_temps = False        # tableau global : colonnes de temps au lieu de steps
 
-        # Cartes du menu : PAR_PAGE par page, sur deux colonnes, au milieu de la zone de jeu.
+        # Cartes du menu : PAR_PAGE par page, sur COLONNES_MENU colonnes, au milieu de la zone de jeu.
         # La carte du niveau i est boutons_niveaux[i % PAR_PAGE] ; la page est choix_menu // PAR_PAGE.
         self.boutons_niveaux = []
         for i in range(PAR_PAGE):
-            colonne = i % 2
-            ligne = i // 2
-            x = largeur // 2 - 262 + colonne * 268
-            y = 140 + ligne * 74
-            self.boutons_niveaux.append(pygame.Rect(x, y, 256, 62))
+            colonne = i % COLONNES_MENU
+            ligne = i // COLONNES_MENU
+            x = largeur // 2 - 446 + colonne * 226
+            y = 140 + ligne * 112
+            self.boutons_niveaux.append(pygame.Rect(x, y, 214, 100))
         self.choix_menu = 0     # carte selectionnee (souris ou fleches du clavier)
-        self.bouton_page_avant = pygame.Rect(largeur // 2 - 130, hauteur - 74, 90, 34)
-        self.bouton_page_apres = pygame.Rect(largeur // 2 + 40, hauteur - 74, 90, 34)
+        self.bouton_page_avant = pygame.Rect(largeur // 2 - 130, hauteur - 58, 90, 34)
+        self.bouton_page_apres = pygame.Rect(largeur // 2 + 40, hauteur - 58, 90, 34)
 
         # Ecran d'accueil : trois gros boutons.
         self.bouton_jouer = pygame.Rect(largeur // 2 - 150, 210, 300, 56)
@@ -385,8 +397,8 @@ class Game:
                         self.resoudre(2)
                     if evenement.key == pygame.K_3:
                         self.resoudre(3)
-                    if evenement.key == pygame.K_4:
-                        self.resoudre(4)
+                    if evenement.key == pygame.K_d:
+                        self.changer_deadlock()
                     if evenement.key == pygame.K_c:
                         self.comparer()
                     if evenement.key in (pygame.K_p, pygame.K_SPACE):
@@ -413,6 +425,8 @@ class Game:
                             self.resoudre(k)
                     if self.bouton_comparer.collidepoint(evenement.pos):
                         self.comparer()
+                    if self.bouton_deadlock.collidepoint(evenement.pos):
+                        self.changer_deadlock()
                     if self.bouton_pause.collidepoint(evenement.pos):
                         self.pause = not self.pause
                     if self.bouton_plus.collidepoint(evenement.pos):
@@ -425,6 +439,14 @@ class Game:
                     self.ouvrir_menu()
                 if self.phase == "bravo":
                     self.clic_pancarte(evenement.pos)
+
+    def changer_deadlock(self):
+        # Allume ou eteint la detection de deadlock pour les boutons A* (le BFS ne l'utilise pas).
+        self.deadlock = not self.deadlock
+        if self.deadlock:
+            self.afficher_message("Deadlock allume : les caisses perdues sont ignorees")
+        else:
+            self.afficher_message("Deadlock eteint")
 
     def changer_vitesse(self, sens):
         # sens = 1 : plus rapide ; sens = -1 : plus lent (DELAIS_PAS va du plus lent au plus rapide).
@@ -494,7 +516,7 @@ class Game:
                 if 0 <= numero < len(LEVELS):
                     self.charger_niveau(numero)
             # Fleches : on se deplace dans la grille de cartes (2 colonnes).
-            deplacements = {pygame.K_LEFT: -1, pygame.K_RIGHT: 1, pygame.K_UP: -2, pygame.K_DOWN: 2}
+            deplacements = {pygame.K_LEFT: -1, pygame.K_RIGHT: 1, pygame.K_UP: -COLONNES_MENU, pygame.K_DOWN: COLONNES_MENU}
             if evenement.key in deplacements:
                 nouveau = self.choix_menu + deplacements[evenement.key]
                 if 0 <= nouveau < len(LEVELS):
@@ -592,10 +614,9 @@ class Game:
         t = min(1.0, (pygame.time.get_ticks() - self.anim_debut) / float(DUREE_MOUVEMENT))
         return 1 - (1 - t) * (1 - t)
 
-    def lancer(self, etat, k):
-        # Lance l'algorithme numero k de ALGOS depuis l'etat donne.
+    def lancer(self, etat, h, deadlock):
+        # Lance BFS (h = None), A* ou A* avec elagage des deadlocks, depuis l'etat donne.
         # Retourne (noeud but ou None, steps, temps de calcul en secondes).
-        nom, h, deadlock = ALGOS[k]
         debut = time.time()
         if h is None:
             noeud, steps = BFS(etat, lambda s: s.successorFunction(), lambda s: s.isGoal())
@@ -621,8 +642,11 @@ class Game:
         self.annuler_solution()
         self.algo_choisi = k
         nom = ALGOS[k][0]
+        deadlock = self.deadlock and ALGOS[k][1] is not None
+        if deadlock:
+            nom = nom + " + deadlock"
         self.afficher_calcul()
-        noeud, steps, duree = self.lancer(self.etat, k)
+        noeud, steps, duree = self.lancer(self.etat, ALGOS[k][1], deadlock)
         # cout = longueur de la solution ; steps = noeuds developpes (travail de la recherche).
         if noeud is None:
             self.resultat = nom + " : aucune solution | " + str(steps) + " steps"
@@ -636,32 +660,36 @@ class Game:
             self.resultat = nom + " : cout " + str(noeud.g) + " | " + str(steps) + " steps | " + "%.3f" % duree + " s"
 
     def comparer(self):
-        # Lance les algorithmes depuis la position actuelle et prepare le tableau (une ligne par algorithme).
-        # La fenetre se fige quelques secondes sur les grands niveaux, le temps du calcul.
+        # Tableau de la position actuelle : pour chaque algorithme, le resultat SANS puis AVEC detection de deadlock.
+        # Ligne = [algo, cout, steps, temps, steps avec DL, temps avec DL, gain] ; le BFS n'a pas de version DL.
+        # self.barres = (steps sans, steps avec ou None) de chaque ligne, pour dessiner les barres.
         self.annuler_solution()
         self.afficher_calcul()
-        self.comparaison = [["Algo", "Cout", "Steps", "Temps"]]
         self.debut_comparaison = pygame.time.get_ticks()
-        steps_h3 = 0
-        steps_dl = 0
-        for k in range(len(ALGOS)):
-            noeud, steps, duree = self.lancer(self.etat, k)
+        self.comparaison = [["Algo", "Cout", "Steps", "Temps", "Steps + DL", "Temps + DL", "Gain"]]
+        self.barres = []
+        for nom, h in ALGOS:
+            noeud, steps, duree = self.lancer(self.etat, h, False)
             cout = "-"
             if noeud is not None:
                 cout = str(noeud.g)
-            self.comparaison.append([ALGOS[k][0], cout, str(steps), "%.3f s" % duree])
-            if ALGOS[k][0] == "A* h3":
-                steps_h3 = steps
-            if ALGOS[k][0] == "A* DL":
-                steps_dl = steps
-        # DL = A* h3 qui ignore les etats deadlock : on mesure combien de noeuds en moins.
-        gain = 0.0
-        if steps_h3 > 0:
-            gain = 100.0 * (steps_h3 - steps_dl) / steps_h3
-        self.note_comparaison = "Deadlock : h3 " + str(steps_h3) + " -> DL " + str(steps_dl) + " steps (gain " + "%.1f" % gain + " %)"
+            ligne = [nom, cout, str(steps), "%.3f s" % duree, "-", "-", "-"]
+            avec = None
+            if h is not None:
+                noeud_dl, steps_dl, duree_dl = self.lancer(self.etat, h, True)
+                avec = steps_dl
+                gain = 0.0
+                if steps > 0:
+                    gain = 100.0 * (steps - steps_dl) / steps
+                ligne[4] = str(steps_dl)
+                ligne[5] = "%.3f s" % duree_dl
+                ligne[6] = "%.1f %%" % gain
+            self.comparaison.append(ligne)
+            self.barres.append((steps, avec))
+        self.note_comparaison = "DL = detection de deadlock : les etats avec une caisse perdue sont ignores"
 
     def comparer_tous_les_niveaux(self):
-        # Ecran d'accueil : les 5 algorithmes sur chaque niveau (une seule fois, le resultat est garde).
+        # Ecran d'accueil : les 7 colonnes de ALGOS_TOUS sur chaque niveau (une seule fois, le resultat est garde).
         if len(self.tableau_global) == 0:
             self.afficher_calcul()
             for niveau in LEVELS:
@@ -669,8 +697,8 @@ class Game:
                 cout = "-"
                 steps = []
                 temps = []
-                for k in range(len(ALGOS)):
-                    noeud, nb_steps, duree = self.lancer(etat, k)
+                for nom, h, deadlock in ALGOS_TOUS:
+                    noeud, nb_steps, duree = self.lancer(etat, h, deadlock)
                     if noeud is not None:
                         cout = str(noeud.g)
                     steps.append(nb_steps)
@@ -1241,14 +1269,14 @@ class Game:
 
     def dessiner_menu(self):
         # Menu : herbe et haie (avec les lucioles), une grande planche avec le titre,
-        # puis une carte par niveau de la page : apercu du niveau, numero et nom, et les boutons < >.
+        # puis une carte par niveau de la page : grand apercu, numero, nom et etoiles gagnees.
         self.monde.blit(self.fond_menu, (0, 0))
         self.dessiner_effets()
         self.ecran.blit(self.monde, (0, 0))
 
         largeur = self.monde.get_width()
         hauteur = self.monde.get_height()
-        self.dessiner_planche(pygame.Rect(largeur // 2 - 280, 24, 560, hauteur - 40), 14)
+        self.dessiner_planche(pygame.Rect(largeur // 2 - 480, 24, 960, hauteur - 36), 14)
         self.ecrire_ombre("SOKOBAN", 56, (255, 235, 170), largeur // 2, 36, True)
         page = self.choix_menu // PAR_PAGE
         nb_pages = (len(LEVELS) + PAR_PAGE - 1) // PAR_PAGE
@@ -1264,26 +1292,25 @@ class Game:
             bord = (200, 160, 100)
             if i == self.choix_menu:
                 # La carte choisie (sous la souris) se souleve un peu, plus claire, avec un contour dore.
-                carte = carte.move(0, -3)
+                carte = carte.move(0, -4)
                 fond = (175, 120, 65)
                 bord = (255, 225, 120)
-            pygame.draw.rect(self.ecran, (60, 38, 18), carte.move(0, 4), 0, 8)     # epaisseur sous la carte
-            pygame.draw.rect(self.ecran, fond, carte, 0, 8)
-            pygame.draw.rect(self.ecran, bord, carte, 3, 8)
+            pygame.draw.rect(self.ecran, (60, 38, 18), carte.move(0, 5), 0, 10)     # epaisseur sous la carte
+            pygame.draw.rect(self.ecran, fond, carte, 0, 10)
+            pygame.draw.rect(self.ecran, bord, carte, 3, 10)
 
-            # Apercu du niveau a gauche de la carte, centre dans un carre de 50 x 50.
+            # Apercu du niveau a gauche de la carte, centre dans un carre de 76 x 76.
             grille = LEVELS[i]["grid"]
-            cote = 50 // max(len(grille), len(grille[0]))
-            self.dessiner_apercu(grille, carte.x + 8 + (50 - cote * len(grille[0])) // 2, carte.y + 6 + (50 - cote * len(grille)) // 2, cote)
-            numero = self.ecrire(str(i + 1), 28, (255, 225, 120))
-            self.ecrire_ombre(str(i + 1), 28, (255, 225, 120), carte.x + 70, carte.y + 14)
-            self.ecrire_ombre(LEVELS[i]["name"], 18, (255, 245, 215), carte.x + 70 + numero.get_width() + 14, carte.y + 14)
+            cote = 76 // max(len(grille), len(grille[0]))
+            self.dessiner_apercu(grille, carte.x + 10 + (76 - cote * len(grille[0])) // 2, carte.y + 12 + (76 - cote * len(grille)) // 2, cote)
+            self.ecrire_ombre(str(i + 1), 30, (255, 225, 120), carte.x + 98, carte.y + 8)
+            self.ecrire_ombre(LEVELS[i]["name"], 16, (255, 245, 215), carte.x + 98, carte.y + 44)
             # Etoiles gagnees (grises tant que le niveau n'est pas reussi).
-            for k in range(3):
+            for e in range(3):
                 couleur = COULEUR_ETOILE_VIDE
-                if k < self.etoiles.get(i, 0):
+                if e < self.etoiles.get(i, 0):
                     couleur = COULEUR_ETOILE
-                dessiner_etoile(self.ecran, carte.x + 78 + numero.get_width() + k * 22, carte.y + 46, 8, couleur)
+                dessiner_etoile(self.ecran, carte.x + 108 + e * 26, carte.y + 78, 9, couleur)
 
         # Boutons de page (seulement s'il y a plusieurs pages) et numero de la page.
         if nb_pages > 1:
@@ -1291,14 +1318,16 @@ class Game:
             self.dessiner_bouton(self.bouton_page_apres, ">")
             self.ecrire_ombre(str(page + 1) + " / " + str(nb_pages), 18, (255, 240, 200), largeur // 2, self.bouton_page_avant.y + 8, True)
 
-    def dessiner_bouton(self, rectangle, texte):
+    def dessiner_bouton(self, rectangle, texte, allume=False):
         # Bouton en bois avec un peu de relief : plus clair sous la souris, enfonce quand on clique.
         souris = pygame.mouse.get_pos()
         survole = rectangle.collidepoint(souris)
         enfonce = survole and pygame.mouse.get_pressed()[0]
         couleur = (150, 100, 52)
+        if allume:
+            couleur = (70, 150, 85)          # bouton allume (ex : Deadlock) : vert
         if survole:
-            couleur = (185, 128, 70)
+            couleur = (couleur[0] + 30, couleur[1] + 22, couleur[2] + 18)
         if survole:
             rectangle = rectangle.inflate(6, 4)       # le bouton grossit sous la souris
         pygame.draw.rect(self.ecran, (60, 38, 18), rectangle.move(0, 3), 0, 8)    # epaisseur du bouton
@@ -1311,7 +1340,7 @@ class Game:
         self.ecran.blit(image, (rectangle.x + (rectangle.width - image.get_width()) // 2, rectangle.y + (rectangle.height - image.get_height()) // 2))
 
     def dessiner_barre(self):
-        # Barre d'infos en bas : niveau, coups, algorithme choisi, resultat (cout, steps, temps), boutons, touches.
+        # Barre d'infos en bas : texte a gauche (niveau, coups, algorithme, resultat), boutons a droite.
         haut = self.monde.get_height()
         largeur = self.ecran.get_width()
         # Fond en bois sombre, avec un filet dore en haut.
@@ -1320,39 +1349,36 @@ class Game:
         pygame.draw.line(self.ecran, (120, 80, 40), (0, haut + 3), (largeur, haut + 3), 2)
 
         if self.phase == "accueil":
-            self.ecrire_ombre("Accueil", 20, (255, 235, 170), 14, haut + 12)
-            self.ecrire_ombre("Jouer : J ou Entree   Comparer : C", 16, (255, 245, 215), 14, haut + 44)
-            self.ecrire_ombre("S : son   Echap : quitter", 14, (220, 200, 170), 14, haut + 88)
+            self.ecrire_ombre("Accueil", 20, (255, 235, 170), 14, haut + 14)
+            self.ecrire_ombre("Jouer : J ou Entree   Comparer : C   Quitter : Echap", 16, (255, 245, 215), 14, haut + 50)
+            self.ecrire_ombre("S : son", 14, (220, 200, 170), 14, haut + 90)
             return
         if self.phase == "menu":
-            self.ecrire_ombre("Menu", 20, (255, 235, 170), 14, haut + 12)
-            self.ecrire_ombre("Clic, touche 1 a " + str(min(9, len(LEVELS))) + ", ou fleches + Entree", 16, (255, 245, 215), 14, haut + 44)
-            self.ecrire_ombre("Molette ou < > : page suivante", 14, (220, 200, 170), 14, haut + 88)
-            self.ecrire_ombre("S : son   Echap : accueil", 14, (220, 200, 170), 14, haut + 114)
+            self.ecrire_ombre("Menu", 20, (255, 235, 170), 14, haut + 14)
+            self.ecrire_ombre("Clic, touche 1 a " + str(min(9, len(LEVELS))) + ", ou fleches + Entree", 16, (255, 245, 215), 14, haut + 50)
+            self.ecrire_ombre("S : son   Echap : accueil", 14, (220, 200, 170), 14, haut + 90)
             return
 
-        # Ligne 1 : niveau a gauche, coups a droite (compteur de coups joues, a la main ou par la simulation).
+        # Texte a gauche : niveau, coups (et objectif), algorithme choisi, resultat.
         self.ecrire_ombre("Niveau " + str(self.numero + 1) + " / " + str(len(LEVELS)) + "  " + self.niveau["name"], 18, (255, 235, 170), 14, haut + 10)
-        texte_coups = "Coups : " + str(self.coups) + "   Objectif : " + str(self.optimal)
-        coups = self.ecrire(texte_coups, 18, (255, 245, 215))
-        self.ecrire_ombre(texte_coups, 18, (255, 245, 215), largeur - coups.get_width() - 14, haut + 10)
-
-        # Ligne 2 : algorithme choisi et vitesse de la simulation.
-        ligne = "Algo : " + ALGOS[self.algo_choisi][0] + "   Vitesse : " + str(self.vitesse + 1) + "/" + str(len(DELAIS_PAS))
+        self.ecrire_ombre("Coups : " + str(self.coups) + "   Objectif : " + str(self.optimal), 16, (255, 245, 215), 14, haut + 36)
+        nom = ALGOS[self.algo_choisi][0]
+        if self.deadlock and ALGOS[self.algo_choisi][1] is not None:
+            nom = nom + " + deadlock"
+        ligne = "Algo : " + nom + "   Vitesse : " + str(self.vitesse + 1) + "/" + str(len(DELAIS_PAS))
         if self.auto and self.pause:
             ligne = ligne + "   PAUSE"
         elif self.auto and self.phase == "jeu":
             ligne = ligne + "   lecture..."
-        self.ecrire_ombre(ligne, 16, (255, 245, 215), 14, haut + 34)
-
-        # Ligne 3 : resultat du dernier algorithme (cout, steps, temps).
+        self.ecrire_ombre(ligne, 14, (255, 245, 215), 14, haut + 62)
         if self.resultat != "":
-            self.ecrire_ombre(self.resultat, 16, (130, 225, 255), 14, haut + 58)
+            self.ecrire_ombre(self.resultat, 14, (130, 225, 255), 14, haut + 86)
         else:
-            self.ecrire_ombre("Choisis un algorithme pour voir sa solution", 16, (220, 200, 170), 14, haut + 58)
+            self.ecrire_ombre("Choisis un algorithme pour voir sa solution", 14, (220, 200, 170), 14, haut + 86)
 
         for k in range(len(ALGOS)):
             self.dessiner_bouton(self.boutons_algos[k], ALGOS[k][0])
+        self.dessiner_bouton(self.bouton_deadlock, "Deadlock", self.deadlock)
         self.dessiner_bouton(self.bouton_comparer, "Comparer")
         self.dessiner_bouton(self.bouton_annuler, "Annuler")
         self.dessiner_bouton(self.bouton_recommencer, "Recommencer")
@@ -1363,81 +1389,89 @@ class Game:
             self.dessiner_bouton(self.bouton_pause, "Pause")
         self.dessiner_bouton(self.bouton_moins, "-")
         self.dessiner_bouton(self.bouton_plus, "+")
-        aide = "Z annuler  R rejouer  B 1-4 algo  C comparer  P pause  Echap menu"
-        self.ecran.blit(self.ecrire(aide, 12, (210, 185, 150)), (14, haut + HAUTEUR_BARRE - 16))
+        aide = "Z annuler  R rejouer  B 1 2 3 algo  D deadlock  C comparer  P pause  + - vitesse  Echap menu"
+        self.ecran.blit(self.ecrire(aide, 12, (210, 185, 150)), (14, haut + HAUTEUR_BARRE - 18))
 
     def dessiner_comparaison(self):
-        # Tableau "Comparer" : planche au milieu de la zone de jeu, une ligne par algorithme, colonnes alignees.
+        # Tableau "Comparer" : une ligne par algorithme, SANS puis AVEC detection de deadlock, et deux barres
+        # sous chaque ligne A* (doree = sans deadlock, verte = avec) pour voir tout de suite la difference.
         largeur = self.monde.get_width()
-        planche = pygame.Rect(0, 0, 500, 70 + 32 * len(self.comparaison) + 70)
+        planche = pygame.Rect(0, 0, 820, 80 + 46 * len(self.comparaison) + 78)
         planche.center = (largeur // 2, self.monde.get_height() // 2)
         self.dessiner_planche(planche, 12)
         self.ecrire_ombre("Comparaison - " + self.niveau["name"], 22, (255, 235, 170), planche.centerx, planche.y + 14, True)
-        # Barres derriere les lignes : longueur proportionnelle aux steps (la plus courte en vert), qui grandissent.
-        steps = []
-        for i in range(1, len(self.comparaison)):
-            steps.append(int(self.comparaison[i][2]))
-        plus_grand = max(steps)
-        plus_petit = min(steps)
-        croissance = min(1.0, (pygame.time.get_ticks() - self.debut_comparaison) / 600.0)
-        for i in range(1, len(self.comparaison)):
-            couleur = (255, 200, 80, 110)
-            if steps[i - 1] == plus_petit:
-                couleur = (90, 220, 110, 140)
-            longueur = int((planche.width - 48) * steps[i - 1] / float(plus_grand) * croissance)
-            barre = pygame.Surface((max(1, longueur), 28), pygame.SRCALPHA)
-            pygame.draw.rect(barre, couleur, barre.get_rect(), 0, 6)
-            self.ecran.blit(barre, (planche.x + 24, planche.y + 54 + 32 * i - 2))
 
-        # Chaque colonne est centree sur son milieu.
-        milieux = [planche.x + 90, planche.x + 210, planche.x + 320, planche.x + 430]
+        # Les barres grandissent pendant une demi-seconde ; elles sont proportionnelles au plus grand nombre de steps.
+        plus_grand = 1
+        for sans, avec in self.barres:
+            plus_grand = max(plus_grand, sans)
+        croissance = min(1.0, (pygame.time.get_ticks() - self.debut_comparaison) / 600.0)
+        longueur_max = planche.width - 48
+
+        milieux = [planche.x + 90, planche.x + 190, planche.x + 290, planche.x + 395, planche.x + 515, planche.x + 635, planche.x + 735]
         for i in range(len(self.comparaison)):
-            couleur = (255, 245, 215)
-            if i == 0:
-                couleur = (255, 225, 120)
+            y = planche.y + 56 + 46 * i
             for j in range(len(milieux)):
-                self.ecrire_ombre(self.comparaison[i][j], 18, couleur, milieux[j], planche.y + 54 + 32 * i, True)
+                couleur = (255, 245, 215)
+                if i == 0:
+                    couleur = (255, 225, 120)
+                elif j >= 4:
+                    couleur = COULEUR_DL
+                self.ecrire_ombre(self.comparaison[i][j], 17, couleur, milieux[j], y, True)
             if i == 0:
-                y = planche.y + 54 + 32 * i + 28
-                pygame.draw.line(self.ecran, (85, 52, 25), (planche.x + 24, y), (planche.right - 24, y), 3)
-        bas = planche.y + 54 + 32 * len(self.comparaison)
-        self.ecrire_ombre(self.note_comparaison, 15, (130, 225, 255), planche.centerx, bas + 6, True)
-        self.ecrire_ombre("(une touche ou un clic pour fermer)", 13, (230, 205, 160), planche.centerx, planche.bottom - 28, True)
+                pygame.draw.line(self.ecran, (85, 52, 25), (planche.x + 24, y + 28), (planche.right - 24, y + 28), 3)
+            else:
+                sans, avec = self.barres[i - 1]
+                pygame.draw.rect(self.ecran, COULEUR_SANS_DL, (planche.x + 24, y + 26, max(2, int(longueur_max * sans / float(plus_grand) * croissance)), 6), 0, 3)
+                if avec is not None:
+                    pygame.draw.rect(self.ecran, COULEUR_DL, (planche.x + 24, y + 33, max(2, int(longueur_max * avec / float(plus_grand) * croissance)), 6), 0, 3)
+
+        bas = planche.y + 56 + 46 * len(self.comparaison)
+        self.ecrire_ombre(self.note_comparaison, 14, (130, 225, 255), planche.centerx, bas + 6, True)
+        self.ecrire_ombre("barre doree : sans deadlock   barre verte : avec deadlock", 14, (230, 205, 160), planche.centerx, bas + 28, True)
+        self.ecrire_ombre("(une touche ou un clic pour fermer)", 13, (230, 205, 160), planche.centerx, planche.bottom - 26, True)
 
     def dessiner_tableau_global(self):
-        # Tableau de tous les niveaux : une ligne par niveau, une colonne par algorithme (steps ou temps).
+        # Tableau de tous les niveaux : une ligne par niveau ; colonnes BFS, A* h1 h2 h3, puis les memes A* avec
+        # detection de deadlock (+DL, en vert). Steps ou temps, au choix (bouton ou touche T).
         largeur = self.monde.get_width()
         hauteur = self.monde.get_height()
         planche = pygame.Rect(10, 10, largeur - 20, hauteur - 20)
         self.dessiner_planche(planche, 12)
         if self.vue_temps:
-            titre = "Comparaison : temps de calcul (s)"
+            titre = "Comparaison de tous les niveaux : temps de calcul (s)"
         else:
-            titre = "Comparaison : steps (noeuds developpes)"
+            titre = "Comparaison de tous les niveaux : steps (noeuds developpes)"
         self.ecrire_ombre(titre, 20, (255, 235, 170), planche.centerx, planche.y + 12, True)
+        self.ecrire_ombre("+DL = avec detection de deadlock (caisses perdues ignorees)", 14, COULEUR_DL, planche.centerx, planche.y + 42, True)
 
-        # Colonnes : niveau (a gauche), cout optimal, puis un algorithme par colonne.
+        # Colonnes : niveau (a gauche), cout optimal, puis une colonne par entree de ALGOS_TOUS.
         entetes = ["Niveau", "Cout"]
-        for algo in ALGOS:
-            entetes.append(algo[0])
-        milieux = [planche.x + 80, planche.x + 158]
-        for k in range(len(ALGOS)):
-            milieux.append(planche.x + 228 + k * 68)
-        y = planche.y + 46
+        milieux = [planche.x + 100, planche.x + 215]
+        for k in range(len(ALGOS_TOUS)):
+            entetes.append(ALGOS_TOUS[k][0])
+            milieux.append(planche.x + 320 + k * 100)
+        y = planche.y + 74
         for j in range(len(entetes)):
-            self.ecrire_ombre(entetes[j], 14, (255, 225, 120), milieux[j], y, True)
-        pygame.draw.line(self.ecran, (85, 52, 25), (planche.x + 16, y + 22), (planche.right - 16, y + 22), 3)
+            couleur = (255, 225, 120)
+            if j >= 2 and ALGOS_TOUS[j - 2][2]:
+                couleur = COULEUR_DL
+            self.ecrire_ombre(entetes[j], 15, couleur, milieux[j], y, True)
+        pygame.draw.line(self.ecran, (85, 52, 25), (planche.x + 16, y + 24), (planche.right - 16, y + 24), 3)
         for i in range(len(self.tableau_global)):
             nom, cout, steps, temps = self.tableau_global[i]
-            y = planche.y + 78 + 28 * i
+            y = planche.y + 106 + 30 * i
             valeurs = [nom, cout]
-            for k in range(len(ALGOS)):
+            for k in range(len(ALGOS_TOUS)):
                 if self.vue_temps:
                     valeurs.append("%.3f" % temps[k])
                 else:
                     valeurs.append(str(steps[k]))
             for j in range(len(valeurs)):
-                self.ecrire_ombre(valeurs[j], 14, (255, 245, 215), milieux[j], y, True)
+                couleur = (255, 245, 215)
+                if j >= 2 and ALGOS_TOUS[j - 2][2]:
+                    couleur = COULEUR_DL
+                self.ecrire_ombre(valeurs[j], 15, couleur, milieux[j], y, True)
         if self.vue_temps:
             self.dessiner_bouton(self.bouton_vue, "Voir steps")
         else:

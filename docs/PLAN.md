@@ -52,6 +52,8 @@ Troisième sujet : détection de deadlock + interface finale (demandé le 2026-1
 
 - [x] Étape 33 — Interface : fondus entre écrans, accueil animé, objectif et étoiles, confettis, messages, barres dans « Comparer », vignette, boutons qui grossissent (`gui.py` seulement) — 2026-11-03 — docs/logs/2026-11-03_session-03.md
 
+- [x] Étape 34 — Interface : fenêtre large (≈ 3/2), barre texte + boutons, menu en 4 colonnes, bouton Deadlock, tableaux « Comparer » et « tous les niveaux » avec sans / avec deadlock (`gui.py` seulement) — 2026-11-03 — docs/logs/2026-11-03_session-04.md
+
 Correspondance avec les anciens numéros (avant la renumérotation du 2026-10-20, commit `4dc4589`) :
 
 | Nouveau | Ancien | Contenu |
