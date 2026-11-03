@@ -61,6 +61,14 @@ VITESSE_DEPART = 2
 PAR_PAGE = 8
 COULEUR_TRAJET = (90, 210, 255)
 
+# Fondu (ecran qui apparait en douceur), messages et confettis.
+DUREE_FONDU = 350
+DUREE_MESSAGE = 1600
+NOMBRE_CONFETTIS = 70
+COULEURS_CONFETTIS = [(255, 90, 90), (255, 210, 70), (90, 200, 255), (120, 230, 120), (255, 150, 220)]
+COULEUR_ETOILE = (255, 215, 70)
+COULEUR_ETOILE_VIDE = (110, 80, 50)
+
 # Effets du decor vivant.
 NOMBRE_LUCIOLES = 18
 DUREE_PARTICULE = 700    # duree de vie d'une etincelle ou d'un grain de poussiere, en millisecondes
@@ -87,6 +95,29 @@ def creer_halo(rayon, couleur, opacite):
         alpha = int(opacite * (1 - k / float(rayon)))
         pygame.draw.circle(image, (couleur[0], couleur[1], couleur[2], alpha), (rayon, rayon), k)
     return image
+
+
+def creer_vignette(largeur, hauteur):
+    # Bords legerement assombris (comme au cinema) : des rectangles de plus en plus transparents vers le centre.
+    image = pygame.Surface((largeur, hauteur), pygame.SRCALPHA)
+    for k in range(60):
+        alpha = int(90 * (1 - k / 60.0) ** 2)
+        pygame.draw.rect(image, (0, 0, 0, alpha), (k, k, largeur - 2 * k, hauteur - 2 * k), 1)
+    return image
+
+
+def dessiner_etoile(surface, x, y, rayon, couleur):
+    # Etoile a 5 branches centree en (x, y) : 10 points, alternativement loin et pres du centre.
+    points = []
+    for k in range(10):
+        angle = math.pi * k / 5 - math.pi / 2
+        if k % 2 == 0:
+            r = rayon
+        else:
+            r = rayon * 0.45
+        points.append((x + math.cos(angle) * r, y + math.sin(angle) * r))
+    pygame.draw.polygon(surface, couleur, points)
+    pygame.draw.polygon(surface, (90, 55, 20), points, 2)
 
 
 class Game:
@@ -131,6 +162,12 @@ class Game:
         for k in range(NOMBRE_LUCIOLES):
             self.lucioles.append((hasard.uniform(0, largeur), hasard.uniform(0, hauteur), hasard.uniform(0.6, 1.4), hasard.uniform(0, 6.28)))
         self.polices = {}     # polices deja creees, rangees par taille (voir ecrire)
+        self.vignette = creer_vignette(largeur, hauteur)
+        self.etoiles = {}         # meilleur nombre d'etoiles par niveau (numero -> 0 a 3), garde pendant la session
+        self.message = ""         # petit message qui apparait en haut (voir afficher_message)
+        self.fin_message = 0
+        self.debut_fondu = 0      # moment ou l'ecran actuel a commence a apparaitre
+        self.debut_comparaison = 0
 
         # Sons : dictionnaire vide si l'ordinateur n'a pas de carte son (le jeu marche quand meme).
         self.sons = load_sounds()
@@ -182,10 +219,10 @@ class Game:
 
         # Pancarte "Bravo" (au milieu de la zone de jeu) et ses trois boutons, a leur place finale.
         centre_x = largeur // 2
-        self.pancarte = pygame.Rect(centre_x - 230, hauteur // 2 - 100, 460, 190)
-        self.bouton_rejouer = pygame.Rect(centre_x - 215, hauteur // 2 + 25, 130, 42)
-        self.bouton_suivant = pygame.Rect(centre_x - 75, hauteur // 2 + 25, 170, 42)
-        self.bouton_menu_bravo = pygame.Rect(centre_x + 105, hauteur // 2 + 25, 110, 42)
+        self.pancarte = pygame.Rect(centre_x - 230, hauteur // 2 - 120, 460, 240)
+        self.bouton_rejouer = pygame.Rect(centre_x - 215, hauteur // 2 + 45, 130, 42)
+        self.bouton_suivant = pygame.Rect(centre_x - 75, hauteur // 2 + 45, 170, 42)
+        self.bouton_menu_bravo = pygame.Rect(centre_x + 105, hauteur // 2 + 45, 110, 42)
 
         # Le niveau est dessine sur "monde", puis recopie sur l'ecran (pratique pour faire glisser).
         self.monde = pygame.Surface((largeur, hauteur))
@@ -218,6 +255,11 @@ class Game:
         self.debut_niveau = pygame.time.get_ticks()    # moment ou le niveau a commence (pour le temps de jeu)
         self.duree_niveau = 0      # temps de jeu en secondes, calcule a la victoire
         self.chemin_chat = []      # cases que le chat traverse pour aller a la porte
+        self.debut_fondu = pygame.time.get_ticks()
+        self.optimal = self.cout_optimal()     # nombre de coups minimal : l'objectif affiche et base des etoiles
+        self.aide = False          # vrai si on a demande la solution a un algorithme (pas d'etoiles dans ce cas)
+        self.nb_etoiles = 0
+        self.confettis = []
         self.coups = 0          # nombre de deplacements faits (a la main ou par la lecture automatique)
         self.historique = []    # etats precedents, pour annuler un coup (touche Z)
         self.particules = []    # etincelles et poussiere : [x, y, vx, vy, naissance, couleur]
@@ -233,6 +275,29 @@ class Game:
         self.annuler_solution()
         pygame.display.set_caption("Sokoban - Niveau " + str(numero + 1))
 
+    def cout_optimal(self):
+        # Nombre de coups minimal du niveau, trouve par A* (avec elagage des deadlocks, tres rapide).
+        noeud, steps = AStarDeadlock(self.etat, lambda s: s.successorFunction(), lambda s: s.isGoal(), h3)
+        if noeud is None:
+            return 0
+        return noeud.g
+
+    def calculer_etoiles(self):
+        # 3 etoiles : autant de coups que le minimum ; 2 : au plus 50 % de plus ; 1 : le niveau est fini.
+        # Pas d'etoile si c'est l'algorithme qui a joue la solution.
+        if self.aide:
+            return 0
+        if self.coups <= self.optimal:
+            return 3
+        if self.coups <= self.optimal + self.optimal // 2:
+            return 2
+        return 1
+
+    def afficher_message(self, texte):
+        # Petit message en haut de la zone de jeu pendant DUREE_MESSAGE millisecondes.
+        self.message = texte
+        self.fin_message = pygame.time.get_ticks() + DUREE_MESSAGE
+
     def changer_son(self):
         # Allume ou coupe le son (touche S). L'ambiance tourne en boucle (loops=-1) tant que le son est allume.
         self.son_actif = not self.son_actif
@@ -246,6 +311,7 @@ class Game:
         # Ecran d'accueil : titre et boutons Jouer / Comparer / Quitter.
         self.annuler_solution()
         self.ancien_monde = None
+        self.debut_fondu = pygame.time.get_ticks()
         self.phase = "accueil"
         pygame.display.set_caption("Sokoban")
 
@@ -255,6 +321,7 @@ class Game:
         self.annuler_solution()
         self.ancien_monde = None
         self.choix_menu = self.numero
+        self.debut_fondu = pygame.time.get_ticks()
         self.phase = "menu"
         pygame.display.set_caption("Sokoban - Menu")
 
@@ -301,6 +368,7 @@ class Game:
                     self.ouvrir_menu()          # Echap = retour au menu
                 if evenement.key == pygame.K_r:
                     self.charger_niveau(self.numero)
+                    self.afficher_message("Niveau recommence")
                 if evenement.key == pygame.K_m:
                     self.ouvrir_menu()
                 if evenement.key == pygame.K_s:
@@ -504,6 +572,10 @@ class Game:
 
     def annuler_coup(self):
         # Revient a l'etat d'avant le dernier coup (touche Z).
+        if len(self.historique) == 0:
+            self.afficher_message("Rien a annuler")
+        else:
+            self.afficher_message("Coup annule")
         if len(self.historique) > 0:
             self.etat = self.historique.pop()
             self.coups = self.coups - 1
@@ -554,10 +626,12 @@ class Game:
         # cout = longueur de la solution ; steps = noeuds developpes (travail de la recherche).
         if noeud is None:
             self.resultat = nom + " : aucune solution | " + str(steps) + " steps"
+            self.afficher_message("Aucune solution depuis cette position")
         else:
             self.solution = noeud.getSolution()
             self.trajectoire = [etat.player_pos for etat in noeud.getPath()]
             self.auto = True
+            self.aide = True
             self.dernier_pas = pygame.time.get_ticks()
             self.resultat = nom + " : cout " + str(noeud.g) + " | " + str(steps) + " steps | " + "%.3f" % duree + " s"
 
@@ -567,6 +641,7 @@ class Game:
         self.annuler_solution()
         self.afficher_calcul()
         self.comparaison = [["Algo", "Cout", "Steps", "Temps"]]
+        self.debut_comparaison = pygame.time.get_ticks()
         steps_h3 = 0
         steps_dl = 0
         for k in range(len(ALGOS)):
@@ -603,6 +678,23 @@ class Game:
                 self.tableau_global.append((niveau["name"], cout, steps, temps))
         self.vue_globale = True
 
+    def lancer_confettis(self):
+        # Confettis : position de depart, vitesse de chute, couleur et decalage au hasard.
+        self.confettis = []
+        largeur = self.monde.get_width()
+        hauteur = self.monde.get_height()
+        for k in range(NOMBRE_CONFETTIS):
+            self.confettis.append((random.uniform(0, largeur), random.uniform(0, hauteur), random.uniform(60, 160),
+                                   random.choice(COULEURS_CONFETTIS), random.uniform(0, 6.28)))
+
+    def dessiner_confettis(self, ecoule):
+        # Ils tombent en oscillant, et reviennent en haut quand ils sortent par le bas.
+        hauteur = self.monde.get_height()
+        for (x, y, vitesse, couleur, decalage) in self.confettis:
+            yy = (y + vitesse * ecoule / 1000.0) % (hauteur + 20) - 10
+            xx = x + math.sin(ecoule / 400.0 + decalage) * 18
+            pygame.draw.rect(self.ecran, couleur, (int(xx), int(yy), 8, 5))
+
     def changer_phase(self, phase):
         self.phase = phase
         self.debut_phase = pygame.time.get_ticks()
@@ -632,6 +724,9 @@ class Game:
             if not self.en_mouvement() and self.etat.isGoal():
                 self.debut_victoire = pygame.time.get_ticks()
                 self.duree_niveau = (self.debut_victoire - self.debut_niveau) / 1000.0
+                self.nb_etoiles = self.calculer_etoiles()
+                if self.nb_etoiles > self.etoiles.get(self.numero, 0):
+                    self.etoiles[self.numero] = self.nb_etoiles
                 self.changer_phase("ouverture")
         elif self.phase == "ouverture":
             if ecoule >= DUREE_OUVERTURE:
@@ -643,6 +738,7 @@ class Game:
         elif self.phase == "queue":
             if ecoule >= DUREE_QUEUE:
                 self.changer_phase("bravo")     # la pancarte attend que le joueur choisisse
+                self.lancer_confettis()
         elif self.phase == "glisse":
             if ecoule >= DUREE_GLISSE:
                 self.phase = "jeu"
@@ -1058,6 +1154,17 @@ class Game:
         texte = str(self.coups) + " coups en " + "%.1f" % self.duree_niveau + " s"
         self.ecrire_ombre("BRAVO !", 56, (255, 235, 170), planche.centerx, y + 12, True)
         self.ecrire_ombre(texte, 20, (255, 240, 200), planche.centerx, y + 80, True)
+        if self.aide:
+            self.ecrire_ombre("Solution jouee par l'algorithme", 16, (130, 225, 255), planche.centerx, y + 116, True)
+        else:
+            # Les etoiles apparaissent une par une en grossissant ; objectif = nombre de coups minimal.
+            for k in range(3):
+                apparition = max(0.0, min(1.0, (ecoule - 300 - k * 250) / 200.0))
+                if apparition > 0:
+                    couleur = COULEUR_ETOILE_VIDE
+                    if k < self.nb_etoiles:
+                        couleur = COULEUR_ETOILE
+                    dessiner_etoile(self.ecran, planche.centerx + (k - 1) * 56, y + 130, int(20 * apparition), couleur)
 
         # Les boutons suivent la pancarte pendant qu'elle descend.
         nom_suivant = "Niveau suivant"
@@ -1104,12 +1211,33 @@ class Game:
         self.dessiner_effets()
         self.ecran.blit(self.monde, (0, 0))
         largeur = self.monde.get_width()
-        self.dessiner_planche(pygame.Rect(largeur // 2 - 240, 50, 480, 400), 14)
-        self.ecrire_ombre("SOKOBAN", 72, (255, 235, 170), largeur // 2, 74, True)
+        self.dessiner_planche(pygame.Rect(largeur // 2 - 240, 40, 480, 456), 14)
+        maintenant = pygame.time.get_ticks()
+        flotte = int(math.sin(maintenant / 450.0) * 4)       # le titre monte et descend doucement
+        self.ecrire_ombre("SOKOBAN", 72, (255, 235, 170), largeur // 2, 64 + flotte, True)
         self.ecrire_ombre("BFS et A*  -  M1 Visual Computing", 16, (255, 240, 200), largeur // 2, 160, True)
         self.dessiner_bouton(self.bouton_jouer, "Jouer")
         self.dessiner_bouton(self.bouton_comparer_tout, "Comparer (tous les niveaux)")
         self.dessiner_bouton(self.bouton_quitter, "Quitter")
+
+        # Le chat va et vient entre deux caisses, avec de petits sauts.
+        sol = 470
+        caisse = self.sprites["caisse"]
+        self.ecran.blit(caisse, (largeur // 2 - 130 - TAILLE // 2, sol - TAILLE))
+        self.ecran.blit(caisse, (largeur // 2 + 130 - TAILLE // 2, sol - TAILLE))
+        phase = maintenant / 900.0
+        x = largeur // 2 + math.sin(phase) * 70
+        saut = abs(math.sin(maintenant / 110.0)) * 5
+        chat = self.sprites["joueur"]
+        if math.cos(phase) < 0:
+            chat = pygame.transform.flip(chat, True, False)      # il regarde du cote ou il va
+        self.dessiner_ombre_ecran(int(x), sol - 2, 28)
+        self.ecran.blit(chat, (int(x) - chat.get_width() // 2, sol - chat.get_height() - int(saut)))
+
+    def dessiner_ombre_ecran(self, centre_x, bas_y, largeur):
+        # Meme ombre que dessiner_ombre, mais directement sur l'ecran.
+        ombre = pygame.transform.smoothscale(self.image_ombre, (largeur, max(4, largeur // 3)))
+        self.ecran.blit(ombre, (centre_x - largeur // 2, bas_y - ombre.get_height() // 2))
 
     def dessiner_menu(self):
         # Menu : herbe et haie (avec les lucioles), une grande planche avec le titre,
@@ -1149,7 +1277,13 @@ class Game:
             self.dessiner_apercu(grille, carte.x + 8 + (50 - cote * len(grille[0])) // 2, carte.y + 6 + (50 - cote * len(grille)) // 2, cote)
             numero = self.ecrire(str(i + 1), 28, (255, 225, 120))
             self.ecrire_ombre(str(i + 1), 28, (255, 225, 120), carte.x + 70, carte.y + 14)
-            self.ecrire_ombre(LEVELS[i]["name"], 18, (255, 245, 215), carte.x + 70 + numero.get_width() + 14, carte.y + 21)
+            self.ecrire_ombre(LEVELS[i]["name"], 18, (255, 245, 215), carte.x + 70 + numero.get_width() + 14, carte.y + 14)
+            # Etoiles gagnees (grises tant que le niveau n'est pas reussi).
+            for k in range(3):
+                couleur = COULEUR_ETOILE_VIDE
+                if k < self.etoiles.get(i, 0):
+                    couleur = COULEUR_ETOILE
+                dessiner_etoile(self.ecran, carte.x + 78 + numero.get_width() + k * 22, carte.y + 46, 8, couleur)
 
         # Boutons de page (seulement s'il y a plusieurs pages) et numero de la page.
         if nb_pages > 1:
@@ -1165,6 +1299,8 @@ class Game:
         couleur = (150, 100, 52)
         if survole:
             couleur = (185, 128, 70)
+        if survole:
+            rectangle = rectangle.inflate(6, 4)       # le bouton grossit sous la souris
         pygame.draw.rect(self.ecran, (60, 38, 18), rectangle.move(0, 3), 0, 8)    # epaisseur du bouton
         if enfonce:
             rectangle = rectangle.move(0, 2)
@@ -1197,8 +1333,9 @@ class Game:
 
         # Ligne 1 : niveau a gauche, coups a droite (compteur de coups joues, a la main ou par la simulation).
         self.ecrire_ombre("Niveau " + str(self.numero + 1) + " / " + str(len(LEVELS)) + "  " + self.niveau["name"], 18, (255, 235, 170), 14, haut + 10)
-        coups = self.ecrire("Coups : " + str(self.coups), 18, (255, 245, 215))
-        self.ecrire_ombre("Coups : " + str(self.coups), 18, (255, 245, 215), largeur - coups.get_width() - 14, haut + 10)
+        texte_coups = "Coups : " + str(self.coups) + "   Objectif : " + str(self.optimal)
+        coups = self.ecrire(texte_coups, 18, (255, 245, 215))
+        self.ecrire_ombre(texte_coups, 18, (255, 245, 215), largeur - coups.get_width() - 14, haut + 10)
 
         # Ligne 2 : algorithme choisi et vitesse de la simulation.
         ligne = "Algo : " + ALGOS[self.algo_choisi][0] + "   Vitesse : " + str(self.vitesse + 1) + "/" + str(len(DELAIS_PAS))
@@ -1236,6 +1373,22 @@ class Game:
         planche.center = (largeur // 2, self.monde.get_height() // 2)
         self.dessiner_planche(planche, 12)
         self.ecrire_ombre("Comparaison - " + self.niveau["name"], 22, (255, 235, 170), planche.centerx, planche.y + 14, True)
+        # Barres derriere les lignes : longueur proportionnelle aux steps (la plus courte en vert), qui grandissent.
+        steps = []
+        for i in range(1, len(self.comparaison)):
+            steps.append(int(self.comparaison[i][2]))
+        plus_grand = max(steps)
+        plus_petit = min(steps)
+        croissance = min(1.0, (pygame.time.get_ticks() - self.debut_comparaison) / 600.0)
+        for i in range(1, len(self.comparaison)):
+            couleur = (255, 200, 80, 110)
+            if steps[i - 1] == plus_petit:
+                couleur = (90, 220, 110, 140)
+            longueur = int((planche.width - 48) * steps[i - 1] / float(plus_grand) * croissance)
+            barre = pygame.Surface((max(1, longueur), 28), pygame.SRCALPHA)
+            pygame.draw.rect(barre, couleur, barre.get_rect(), 0, 6)
+            self.ecran.blit(barre, (planche.x + 24, planche.y + 54 + 32 * i - 2))
+
         # Chaque colonne est centree sur son milieu.
         milieux = [planche.x + 90, planche.x + 210, planche.x + 320, planche.x + 430]
         for i in range(len(self.comparaison)):
@@ -1301,6 +1454,7 @@ class Game:
             if self.vue_globale:
                 self.dessiner_tableau_global()
             self.dessiner_barre()
+            self.dessiner_fondu()
             pygame.display.flip()
             return
 
@@ -1313,14 +1467,36 @@ class Game:
         else:
             self.dessiner_niveau()
             self.ecran.blit(self.monde, (0, 0))
+            self.ecran.blit(self.vignette, (0, 0))
 
         if self.phase in PHASES_PORTE_OUVERTE:
             # La lumiere reste allumee depuis le moment de la victoire.
             self.dessiner_lumiere(pygame.time.get_ticks() - self.debut_victoire)
         if self.phase == "bravo":
+            self.dessiner_confettis(ecoule)
             self.dessiner_pancarte(ecoule)
 
         if len(self.comparaison) > 0:
             self.dessiner_comparaison()
         self.dessiner_barre()
+        self.dessiner_message()
+        self.dessiner_fondu()
         pygame.display.flip()
+
+    def dessiner_message(self):
+        # Petit panneau en haut de la zone de jeu, qui disparait tout seul.
+        if pygame.time.get_ticks() > self.fin_message:
+            return
+        image = self.ecrire(self.message, 18, (255, 245, 215))
+        planche = pygame.Rect(0, 0, image.get_width() + 40, 44)
+        planche.midtop = (self.monde.get_width() // 2, 12)
+        self.dessiner_planche(planche, 10)
+        self.ecrire_ombre(self.message, 18, (255, 245, 215), planche.centerx, planche.y + 8, True)
+
+    def dessiner_fondu(self):
+        # Au debut d'un ecran, un voile noir de plus en plus transparent : l'ecran apparait en douceur.
+        age = pygame.time.get_ticks() - self.debut_fondu
+        if age < DUREE_FONDU:
+            voile = pygame.Surface(self.ecran.get_size())
+            voile.set_alpha(int(255 * (1 - age / float(DUREE_FONDU))))
+            self.ecran.blit(voile, (0, 0))

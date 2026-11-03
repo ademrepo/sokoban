@@ -50,6 +50,8 @@ Troisième sujet : détection de deadlock + interface finale (demandé le 2026-1
 - [x] Étape 32b — Interface Pygame : écran d'accueil (Jouer / Comparer / Quitter), Échap = retour au menu, « Calcul en cours... », pause et vitesse de la simulation, barre d'infos avec l'algorithme choisi, menu à pages (plus de 8 niveaux), A* + deadlock et gain dans le tableau « Comparer » — 2026-11-03 — docs/logs/2026-11-03_session-02.md
 - [x] Étape 32c — Documentation : § 14 détection de deadlock dans `docs/EXPLICATIONS.md`, vérifications finales — 2026-11-03 — docs/logs/2026-11-03_session-02.md
 
+- [x] Étape 33 — Interface : fondus entre écrans, accueil animé, objectif et étoiles, confettis, messages, barres dans « Comparer », vignette, boutons qui grossissent (`gui.py` seulement) — 2026-11-03 — docs/logs/2026-11-03_session-03.md
+
 Correspondance avec les anciens numéros (avant la renumérotation du 2026-10-20, commit `4dc4589`) :
 
 | Nouveau | Ancien | Contenu |
@@ -66,4 +68,4 @@ Correspondance avec les anciens numéros (avant la renumérotation du 2026-10-20
 Hors plan : commit `c3de3e1` (décor identique dans tous les niveaux, « Niveau N », fenêtre plus petite) = début de l'étape 12, documenté après coup dans docs/logs/2026-10-20_session-15.md.
 
 ## Prochaine étape
-Étapes 0 à 32 faites (32a, 32b, 32c). Reste à décider : « Maison 4 » (dans le stash) et `.gitignore` supprimé. Test : `python test_core.py`, `python main.py --compare`, `python main.py`.
+Étapes 0 à 33 faites. Tester `python main.py` à la main avant la soutenance. Test : `python test_core.py`, `python main.py --compare`, `python main.py`.
