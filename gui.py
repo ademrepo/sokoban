@@ -221,6 +221,7 @@ class Game:
         self.algo_choisi = 0          # dernier algorithme lance (0 = BFS)
         self.tableau_global = []      # comparaison de tous les niveaux : (nom, cout, [steps], [temps])
         self.vue_globale = False      # vrai : le tableau de tous les niveaux est affiche
+        self.vue_aide = False         # vrai : l'ecran "Explications" (le deadlock) est affiche
         self.vue_temps = False        # tableau global : colonnes de temps au lieu de steps
 
         # Cartes du menu : PAR_PAGE par page, sur COLONNES_MENU colonnes, au milieu de la zone de jeu.
@@ -241,9 +242,12 @@ class Game:
             self.boutons_perso.append(pygame.Rect(largeur // 2 - 290 + k * 160, hauteur - 66, 150, 48))
 
         # Ecran d'accueil : trois gros boutons.
-        self.bouton_jouer = pygame.Rect(largeur // 2 - 150, 210, 300, 56)
-        self.bouton_comparer_tout = pygame.Rect(largeur // 2 - 150, 282, 300, 56)
-        self.bouton_quitter = pygame.Rect(largeur // 2 - 150, 354, 300, 56)
+        self.bouton_jouer = pygame.Rect(largeur // 2 - 150, 198, 300, 50)
+        self.bouton_comparer_tout = pygame.Rect(largeur // 2 - 150, 256, 300, 50)
+        self.bouton_explications = pygame.Rect(largeur // 2 - 150, 314, 300, 50)
+        self.bouton_quitter = pygame.Rect(largeur // 2 - 150, 372, 300, 50)
+        self.bouton_aide = pygame.Rect(largeur - 580, hauteur + 76, 38, 38)      # le bouton "?" de la barre
+        self.bouton_fermer_aide = pygame.Rect(largeur // 2 - 75, hauteur - 62, 150, 38)
         # Tableau de tous les niveaux : boutons "Steps / Temps" et "Fermer".
         self.bouton_vue = pygame.Rect(largeur // 2 - 160, hauteur - 62, 150, 38)
         self.bouton_fermer = pygame.Rect(largeur // 2 + 10, hauteur - 62, 150, 38)
@@ -391,6 +395,8 @@ class Game:
         for evenement in pygame.event.get():
             if evenement.type == pygame.QUIT:
                 self.en_cours = False
+            elif self.vue_aide:
+                self.evenement_aide(evenement)
             elif self.vue_globale:
                 self.evenement_tableau_global(evenement)
             elif self.phase == "accueil":
@@ -423,6 +429,8 @@ class Game:
                         self.resoudre(3)
                     if evenement.key == pygame.K_d:
                         self.changer_deadlock()
+                    if evenement.key == pygame.K_h:
+                        self.vue_aide = True
                     if evenement.key == pygame.K_c:
                         self.comparer()
                     if evenement.key in (pygame.K_p, pygame.K_SPACE):
@@ -451,6 +459,8 @@ class Game:
                         self.comparer()
                     if self.bouton_deadlock.collidepoint(evenement.pos):
                         self.changer_deadlock()
+                    if self.bouton_aide.collidepoint(evenement.pos):
+                        self.vue_aide = True
                     if self.bouton_pause.collidepoint(evenement.pos):
                         self.pause = not self.pause
                     if self.bouton_plus.collidepoint(evenement.pos):
@@ -485,6 +495,8 @@ class Game:
                 self.ouvrir_menu()
             if evenement.key == pygame.K_c:
                 self.comparer_tous_les_niveaux()
+            if evenement.key in (pygame.K_e, pygame.K_h):
+                self.vue_aide = True
             if evenement.key == pygame.K_s:
                 self.changer_son()
         if evenement.type == pygame.MOUSEBUTTONDOWN and evenement.button == 1:
@@ -492,8 +504,15 @@ class Game:
                 self.ouvrir_menu()
             if self.bouton_comparer_tout.collidepoint(evenement.pos):
                 self.comparer_tous_les_niveaux()
+            if self.bouton_explications.collidepoint(evenement.pos):
+                self.vue_aide = True
             if self.bouton_quitter.collidepoint(evenement.pos):
                 self.en_cours = False
+
+    def evenement_aide(self, evenement):
+        # Ecran "Explications" : une touche ou un clic le ferme.
+        if evenement.type == pygame.KEYDOWN or evenement.type == pygame.MOUSEBUTTONDOWN:
+            self.vue_aide = False
 
     def evenement_tableau_global(self, evenement):
         # Tableau de tous les niveaux : Echap ou "Fermer" le ferme ; T ou "Steps / Temps" change les colonnes.
@@ -1090,21 +1109,13 @@ class Game:
                 x, y = self.ecran_case(r, c)
                 if grille[r][c] == "O":
                     if touche_le_sol(grille, r, c):
-                        if est_sol(grille, r + 1, c):
-                            # Du sol juste en dessous : on voit la face du mur (briques).
-                            self.monde.blit(self.sprites[self.choisir_face(grille, r, c)], (x, y))
-                        else:
-                            # Sinon on ne voit que le dessus du mur (pierres claires).
-                            self.monde.blit(self.sprites["mur_cap"], (x, y))
+                        self.monde.blit(self.sprites[self.choisir_face(grille, r, c)], (x, y))
                 else:
                     # Toutes les autres cases sont du sol de jeu (dalle de pierre) ; l'herbe reste a l'exterieur.
                     self.monde.blit(self.sprites["sol" + str(1 + (r * 3 + c * 5) % 2)], (x, y))
                     # Ombre douce du mur au-dessus, a gauche et a droite.
                     if not est_sol(grille, r - 1, c):
-                        ombre = "ombre_nord"
-                        if est_sol(grille, r - 2, c):
-                            ombre = "ombre_nord_forte"       # le mur au-dessus est dans l'ombre
-                        self.monde.blit(self.sprites[ombre], (x, y))
+                        self.monde.blit(self.sprites["ombre_nord"], (x, y))
                     if not est_sol(grille, r, c - 1):
                         self.monde.blit(self.sprites["ombre_ouest"], (x, y))
                     if not est_sol(grille, r, c + 1):
@@ -1404,10 +1415,11 @@ class Game:
         self.ecrire_ombre("BFS et A*  -  M1 Visual Computing", 16, (255, 240, 200), largeur // 2, 160, True)
         self.dessiner_bouton(self.bouton_jouer, "Jouer")
         self.dessiner_bouton(self.bouton_comparer_tout, "Comparer (tous les niveaux)")
+        self.dessiner_bouton(self.bouton_explications, "Explications")
         self.dessiner_bouton(self.bouton_quitter, "Quitter")
 
         # Le chat va et vient entre deux caisses, avec de petits sauts.
-        sol = 470
+        sol = 484
         caisse = self.sprites["caisse"]
         self.ecran.blit(caisse, (largeur // 2 - 130 - TAILLE // 2, sol - TAILLE))
         self.ecran.blit(caisse, (largeur // 2 + 130 - TAILLE // 2, sol - TAILLE))
@@ -1534,7 +1546,7 @@ class Game:
 
         if self.phase == "accueil":
             self.ecrire_ombre("Accueil", 20, (255, 235, 170), 14, haut + 14)
-            self.ecrire_ombre("Jouer : J ou Entree   Comparer : C   Quitter : Echap", 16, (255, 245, 215), 14, haut + 50)
+            self.ecrire_ombre("Jouer : J ou Entree   Comparer : C   Explications : E   Quitter : Echap", 16, (255, 245, 215), 14, haut + 50)
             self.ecrire_ombre("S : son", 14, (220, 200, 170), 14, haut + 90)
             return
         if self.phase == "menu":
@@ -1570,13 +1582,14 @@ class Game:
         self.dessiner_bouton(self.bouton_annuler, "Annuler")
         self.dessiner_bouton(self.bouton_recommencer, "Recommencer")
         self.dessiner_bouton(self.bouton_menu, "Menu")
+        self.dessiner_bouton(self.bouton_aide, "?")
         if self.pause:
             self.dessiner_bouton(self.bouton_pause, "Reprendre")
         else:
             self.dessiner_bouton(self.bouton_pause, "Pause")
         self.dessiner_bouton(self.bouton_moins, "-")
         self.dessiner_bouton(self.bouton_plus, "+")
-        aide = "Z annuler  R rejouer  B 1 2 3 algo  D deadlock  C comparer  P pause  + - vitesse  Echap menu"
+        aide = "Z annuler  R rejouer  B 1 2 3 algo  D deadlock  H explications  C comparer  P pause  Echap menu"
         self.ecran.blit(self.ecrire(aide, 12, (210, 185, 150)), (14, haut + HAUTEUR_BARRE - 18))
 
     def dessiner_comparaison(self):
@@ -1686,6 +1699,8 @@ class Game:
                 self.dessiner_menu()
             if self.vue_globale:
                 self.dessiner_tableau_global()
+            if self.vue_aide:
+                self.dessiner_aide()
             self.dessiner_barre()
             self.dessiner_fondu()
             pygame.display.flip()
@@ -1711,10 +1726,86 @@ class Game:
 
         if len(self.comparaison) > 0:
             self.dessiner_comparaison()
+        if self.vue_aide:
+            self.dessiner_aide()
         self.dessiner_barre()
+        self.dessiner_info_deadlock()
         self.dessiner_message()
         self.dessiner_fondu()
         pygame.display.flip()
+
+    def dessiner_info_deadlock(self):
+        # Quand la souris est sur le bouton Deadlock, une bulle explique a quoi il sert.
+        if self.phase != "jeu" or not self.bouton_deadlock.collidepoint(pygame.mouse.get_pos()):
+            return
+        largeur = self.monde.get_width()
+        hauteur = self.monde.get_height()
+        planche = pygame.Rect(largeur - 640, hauteur - 112, 620, 100)
+        self.dessiner_planche(planche, 10)
+        self.ecrire_ombre("Deadlock = une caisse perdue (qu'on ne pourra plus jamais placer).", 14, (255, 240, 200), planche.x + 16, planche.y + 12)
+        self.ecrire_ombre("oui : les A* ignorent ces positions (moins de steps, meme cout).", 14, COULEUR_DL, planche.x + 16, planche.y + 38)
+        self.ecrire_ombre("non : A* normal.   Clique sur ? (ou touche H) pour un exemple.", 14, (255, 240, 200), planche.x + 16, planche.y + 64)
+
+    def dessiner_mini_scene(self, x, y, lignes, perdue):
+        # Petit dessin : une salle de quelques cases avec une caisse. O = mur, B = caisse, S = cible.
+        # Une croix rouge sur la caisse si elle est perdue, une coche verte sinon.
+        caisse = (0, 0)
+        for i in range(len(lignes)):
+            for j in range(len(lignes[i])):
+                px = x + j * TAILLE
+                py = y + i * TAILLE
+                if lignes[i][j] == "O":
+                    self.ecran.blit(self.sprites["mur_sombre0"], (px, py))
+                    continue
+                self.ecran.blit(self.sprites["sol1"], (px, py))
+                if lignes[i][j] == "S":
+                    plaque = pygame.Rect(px + 4, py + 4, TAILLE - 8, TAILLE - 8)
+                    pygame.draw.rect(self.ecran, COULEUR_PLAQUE, plaque, 0, 6)
+                    pygame.draw.rect(self.ecran, COULEUR_CONTOUR, plaque, 4, 6)
+                if lignes[i][j] == "B":
+                    self.ecran.blit(self.sprites["caisse"], (px, py))
+                    caisse = (px + TAILLE // 2, py + TAILLE // 2)
+        if perdue:
+            pygame.draw.line(self.ecran, (230, 60, 60), (caisse[0] - 14, caisse[1] - 14), (caisse[0] + 14, caisse[1] + 14), 6)
+            pygame.draw.line(self.ecran, (230, 60, 60), (caisse[0] - 14, caisse[1] + 14), (caisse[0] + 14, caisse[1] - 14), 6)
+        else:
+            pygame.draw.lines(self.ecran, (80, 220, 100), False, [(caisse[0] - 14, caisse[1]), (caisse[0] - 4, caisse[1] + 12), (caisse[0] + 14, caisse[1] - 12)], 6)
+
+    def dessiner_aide(self):
+        # Ecran "Explications" : c'est quoi un deadlock, trois petits exemples, et ce que fait le bouton Deadlock.
+        largeur = self.monde.get_width()
+        hauteur = self.monde.get_height()
+        planche = pygame.Rect(10, 10, largeur - 20, hauteur - 20)
+        self.dessiner_planche(planche, 12)
+        self.ecrire_ombre("Explications : le deadlock", 24, (255, 235, 170), planche.centerx, planche.y + 12, True)
+        self.ecrire_ombre("Une caisse est PERDUE quand on ne pourra plus jamais la mettre sur une cible.", 16, (255, 245, 215), planche.centerx, planche.y + 50, True)
+
+        # Trois exemples cote a cote : (dessin, legende, verdict).
+        exemples = [(["OOOO", "OB  ", "O  S"], "Dans un coin", True),
+                    (["OOOOO", "O B O", "O  SO"], "Contre un mur sans cible", True),
+                    (["OOOOO", "O BSO", "O   O"], "Cible sur la ligne du mur", False)]
+        x = planche.x + (planche.width - (4 * TAILLE + 5 * TAILLE + 5 * TAILLE + 80)) // 2
+        for lignes, legende, perdue in exemples:
+            largeur_dessin = len(lignes[0]) * TAILLE
+            self.dessiner_mini_scene(x, planche.y + 90, lignes, perdue)
+            milieu = x + largeur_dessin // 2
+            self.ecrire_ombre(legende, 14, (255, 245, 215), milieu, planche.y + 90 + 3 * TAILLE + 10, True)
+            if perdue:
+                self.ecrire_ombre("PERDUE", 16, (255, 120, 120), milieu, planche.y + 90 + 3 * TAILLE + 34, True)
+            else:
+                self.ecrire_ombre("PAS PERDUE", 16, COULEUR_DL, milieu, planche.y + 90 + 3 * TAILLE + 34, True)
+            x = x + largeur_dessin + 40
+
+        # Le bouton Deadlock.
+        y = planche.y + 90 + 3 * TAILLE + 78
+        self.ecrire_ombre("Le bouton Deadlock", 20, (255, 235, 170), planche.centerx, y, True)
+        lignes_texte = [("Inutile d'explorer une position avec une caisse perdue : elle ne mene a aucune solution.", (255, 245, 215)),
+                        ("Deadlock : oui  ->  les A* ignorent ces positions : moins de steps, le meme cout optimal.", COULEUR_DL),
+                        ("Deadlock : non  ->  A* normal, il explore aussi les positions perdues.", (255, 245, 215)),
+                        ("Le BFS n'utilise pas la detection. Le bouton Comparer montre les deux cote a cote.", (255, 245, 215))]
+        for k in range(len(lignes_texte)):
+            self.ecrire_ombre(lignes_texte[k][0], 15, lignes_texte[k][1], planche.centerx, y + 36 + 26 * k, True)
+        self.dessiner_bouton(self.bouton_fermer_aide, "Fermer")
 
     def dessiner_message(self):
         # Petit panneau en haut de la zone de jeu, qui disparait tout seul.

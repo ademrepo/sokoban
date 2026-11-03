@@ -119,8 +119,8 @@ def AStar(s, successorsFn, isGoal, h):
 
 
 def AStarDeadlock(s, successorsFn, isGoal, h):
-    # Meme A* que ci-dessus, mais les successeurs qui sont un deadlock (caisse perdue) sont ignores :
-    # ils n'entrent jamais dans Open. On garde AStar intact : on filtre simplement la liste des successeurs.
+    # Meme A* que ci-dessus, mais on ne garde pas les successeurs qui sont un deadlock (caisse perdue) :
+    # ils n'entrent jamais dans Open. AStar reste intact : on lui donne une fonction successeurs qui les enleve.
     def sans_deadlock(etat):
         liste = []
         for action, successeur in successorsFn(etat):

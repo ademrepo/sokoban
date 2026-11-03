@@ -112,10 +112,10 @@ class SokobanPuzzle:
 
 
 # ---------------------------------------------------------------------------
-# Détection de deadlock (partie D). Ce ne sont PAS des règles du jeu : ces fonctions ne servent
-# qu'à écarter, dans A*, des états d'où le but est impossible à atteindre.
-# Elles sont prudentes : elles ne répondent True que si la caisse est vraiment perdue,
-# sinon A* pourrait rater la solution optimale.
+# Détection de deadlock (partie D). Ce ne sont PAS des règles du jeu : ces fonctions servent seulement
+# à repérer une caisse "perdue" (qu'on ne pourra plus jamais mettre sur une cible), pour que A* ne perde
+# pas son temps sur ces positions. On répond True seulement si on est sûr : sinon A* pourrait rater
+# la solution optimale.
 # ---------------------------------------------------------------------------
 
 def est_mur(grid, r, c):
@@ -132,7 +132,7 @@ def est_cible(grid, r, c):
 
 def est_coin_deadlock(grid, r, c):
     # Deadlock d'angle : une caisse hors cible ('B') avec un mur au-dessus ou en dessous
-    # ET un mur à gauche ou à droite ne pourra plus jamais bouger.
+    # ET un mur à gauche ou à droite ne bougera plus jamais.
     if grid[r][c] != "B":
         return False
     mur_vertical = est_mur(grid, r - 1, c) or est_mur(grid, r + 1, c)
@@ -140,37 +140,37 @@ def est_coin_deadlock(grid, r, c):
     return mur_vertical and mur_horizontal
 
 
-def ligne_de_mur_sans_cible(grid, r, c, mr, mc):
-    # La caisse (r, c) est collee a un mur : le mur est du cote (mr, mc). Elle ne peut alors glisser que le long
-    # de ce mur. On parcourt toute la ligne de mur, dans les deux sens :
-    #  - si on trouve une cible, la caisse n'est pas perdue ;
-    #  - si le mur s'arrete (ouverture), la caisse pourrait en sortir : pas perdue ;
-    #  - si on arrive a un mur aux deux bouts sans cible : perdue.
-    for sens in (1, -1):
-        rr = r
-        cc = c
-        while not est_mur(grid, rr, cc):
-            if est_cible(grid, rr, cc):
-                return False
-            if not est_mur(grid, rr + mr, cc + mc):
-                return False                            # le mur du cote s'arrete : la caisse peut sortir
-            rr = rr + sens * mc                         # on glisse le long du mur (perpendiculaire a (mr, mc))
-            cc = cc + sens * mr
+def bout_sans_issue(grid, r, c, mr, mc, dr, dc):
+    # La caisse est collée à un mur : le mur est du côté (mr, mc). On avance le long du mur dans la direction (dr, dc).
+    # Retourne True si on arrive au mur du bout sans avoir vu de cible et sans que le mur s'arrête.
+    while not est_mur(grid, r, c):
+        if est_cible(grid, r, c):
+            return False                    # une cible sur la ligne : la caisse peut y glisser
+        if not est_mur(grid, r + mr, c + mc):
+            return False                    # le mur s'arrête : la caisse pourrait sortir de la ligne
+        r = r + dr
+        c = c + dc
     return True
 
 
 def est_ligne_deadlock(grid, r, c):
-    # Deadlock de ligne : une caisse hors cible collee a un mur, sur une ligne de mur sans aucune cible.
+    # Deadlock de ligne : une caisse hors cible collée à un mur ne peut que glisser le long de ce mur.
+    # Si la ligne de mur n'a aucune cible et que ses deux bouts sont fermés, la caisse est perdue.
     if grid[r][c] != "B":
         return False
-    for mr, mc in ((-1, 0), (1, 0), (0, -1), (0, 1)):
-        if est_mur(grid, r + mr, c + mc) and ligne_de_mur_sans_cible(grid, r, c, mr, mc):
-            return True
+    for mr in (-1, 1):                      # mur au-dessus ou en dessous : la caisse glisse à gauche et à droite
+        if est_mur(grid, r + mr, c):
+            if bout_sans_issue(grid, r, c, mr, 0, 0, 1) and bout_sans_issue(grid, r, c, mr, 0, 0, -1):
+                return True
+    for mc in (-1, 1):                      # mur à gauche ou à droite : la caisse glisse en haut et en bas
+        if est_mur(grid, r, c + mc):
+            if bout_sans_issue(grid, r, c, 0, mc, 1, 0) and bout_sans_issue(grid, r, c, 0, mc, -1, 0):
+                return True
     return False
 
 
 def is_deadlock(etat):
-    # Vrai si l'état contient au moins une caisse perdue (angle ou ligne de mur sans cible).
+    # Vrai si l'état contient au moins une caisse perdue (dans un angle, ou sur une ligne de mur sans cible).
     grid = etat.grid
     for r in range(len(grid)):
         for c in range(len(grid[r])):

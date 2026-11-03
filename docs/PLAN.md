@@ -64,6 +64,8 @@ Troisième sujet : détection de deadlock + interface finale (demandé le 2026-1
 
 - [x] Étape 39 — Murs variés avec `assets/fwall.png` (simple, fenêtre, fissure, mousse, clair / sombre, ombres plus ou moins fortes) ; relecture du code métier : `solveur.py` (une seule fonction `resoudre` pour main.py et gui.py), détection de ligne de mur simplifiée, tests étendus aux niveaux Couloir, Verrou, Entonnoir — 2026-11-03 — docs/logs/2026-11-03_session-09.md
 
+- [x] Étape 40 — Tous les murs viennent de `fwall.png` (même style) ; écran « Explications » sur le deadlock (accueil, bouton « ? », touche H) et bulle d'aide sur le bouton Deadlock ; code de détection de deadlock simplifié (`bout_sans_issue`) — 2026-11-03 — docs/logs/2026-11-03_session-10.md
+
 Correspondance avec les anciens numéros (avant la renumérotation du 2026-10-20, commit `4dc4589`) :
 
 | Nouveau | Ancien | Contenu |
