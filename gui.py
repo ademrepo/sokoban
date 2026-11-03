@@ -4,7 +4,7 @@
 # - rendu d'un niveau avec les sprites du pack, decor autour et effets (lucioles, etincelles) ;
 # - jeu manuel : le chat et les caisses glissent d'une case a l'autre, compteur de coups,
 #   annuler (Z), recommencer ;
-# - boutons BFS, A* h1, A* h2, A* h3, A* DL (A* h3 sans les etats deadlock) : cout, steps (noeuds developpes) et temps de calcul, puis trajectoire
+# - boutons BFS, A* h1, A* h2, A* h3 (et bouton Deadlock : A* sans les etats perdus) : cout, steps et temps de calcul, puis trajectoire
 #   tracee et lecture automatique de la solution
 #   (pause, vitesse reglable) ;
 # - bouton "Comparer" : lance les 4 algorithmes et affiche leur cout, leurs steps et leur temps ;
@@ -14,14 +14,13 @@
 
 import math
 import random
-import time
 from collections import deque
 import pygame
 
 from levels import LEVELS
 from sokoban import SokobanPuzzle, ACTIONS
-from search import BFS
-from astar import AStar, AStarDeadlock, h1, h2, h3
+from astar import h1, h2, h3
+from solveur import resoudre
 from assets_loader import load_sprites, load_sounds
 
 TAILLE = 44            # taille d'une case en pixels
@@ -51,7 +50,7 @@ DUREE_GLISSE = 900       # le glissement vers le niveau suivant
 # La porte est ouverte (et la lumiere allumee) pendant toutes ces phases.
 PHASES_PORTE_OUVERTE = ("ouverture", "marche", "queue", "bravo")
 
-# Les algorithmes proposes : (nom, heuristique, avec elagage des deadlocks) ; None = pas d'heuristique, c'est le BFS.
+# Les algorithmes proposes : (nom, heuristique) ; None = pas d'heuristique, c'est le BFS.
 ALGOS = [("BFS", None), ("A* h1", h1), ("A* h2", h2), ("A* h3", h3)]
 
 # Colonnes du tableau de tous les niveaux : (nom, heuristique, avec elagage des deadlocks).
@@ -314,7 +313,7 @@ class Game:
 
     def cout_optimal(self):
         # Nombre de coups minimal du niveau, trouve par A* (avec elagage des deadlocks, tres rapide).
-        noeud, steps = AStarDeadlock(self.etat, lambda s: s.successorFunction(), lambda s: s.isGoal(), h3)
+        noeud, steps, duree = resoudre(self.etat, h3, True)
         if noeud is None:
             return 0
         return noeud.g
@@ -683,18 +682,6 @@ class Game:
         t = min(1.0, (pygame.time.get_ticks() - self.anim_debut) / float(DUREE_MOUVEMENT))
         return 1 - (1 - t) * (1 - t)
 
-    def lancer(self, etat, h, deadlock):
-        # Lance BFS (h = None), A* ou A* avec elagage des deadlocks, depuis l'etat donne.
-        # Retourne (noeud but ou None, steps, temps de calcul en secondes).
-        debut = time.time()
-        if h is None:
-            noeud, steps = BFS(etat, lambda s: s.successorFunction(), lambda s: s.isGoal())
-        elif deadlock:
-            noeud, steps = AStarDeadlock(etat, lambda s: s.successorFunction(), lambda s: s.isGoal(), h)
-        else:
-            noeud, steps = AStar(etat, lambda s: s.successorFunction(), lambda s: s.isGoal(), h)
-        return noeud, steps, time.time() - debut
-
     def afficher_calcul(self):
         # Le calcul bloque la fenetre (Python pur) : on affiche "Calcul en cours..." AVANT de le lancer.
         self.draw()
@@ -715,7 +702,7 @@ class Game:
         if deadlock:
             nom = nom + " + deadlock"
         self.afficher_calcul()
-        noeud, steps, duree = self.lancer(self.etat, ALGOS[k][1], deadlock)
+        noeud, steps, duree = resoudre(self.etat, ALGOS[k][1], deadlock)
         # cout = longueur de la solution ; steps = noeuds developpes (travail de la recherche).
         if noeud is None:
             self.resultat = nom + " : aucune solution | " + str(steps) + " steps"
@@ -738,14 +725,14 @@ class Game:
         self.comparaison = [["Algo", "Cout", "Steps", "Temps", "Cout", "Steps", "Temps", "Gain"]]
         self.barres = []
         for nom, h in ALGOS:
-            noeud, steps, duree = self.lancer(self.etat, h, False)
+            noeud, steps, duree = resoudre(self.etat, h, False)
             cout = "-"
             if noeud is not None:
                 cout = str(noeud.g)
             ligne = [nom, cout, str(steps), "%.3f s" % duree, "-", "-", "-", "-"]
             avec = None
             if h is not None:
-                noeud_dl, steps_dl, duree_dl = self.lancer(self.etat, h, True)
+                noeud_dl, steps_dl, duree_dl = resoudre(self.etat, h, True)
                 avec = steps_dl
                 gain = 0.0
                 if steps > 0:
@@ -769,7 +756,7 @@ class Game:
                 steps = []
                 temps = []
                 for nom, h, deadlock in ALGOS_TOUS:
-                    noeud, nb_steps, duree = self.lancer(etat, h, deadlock)
+                    noeud, nb_steps, duree = resoudre(etat, h, deadlock)
                     if noeud is not None:
                         cout = str(noeud.g)
                     steps.append(nb_steps)
@@ -1077,6 +1064,20 @@ class Game:
                     touffe = self.sprites["touffe" + str((r + c) % 5)]
                     self.monde.blit(touffe, (c * TAILLE + TAILLE // 4, r * TAILLE + TAILLE // 2))
 
+    def choisir_face(self, grille, r, c):
+        # Type de la face de mur de la case (r, c), choisi selon sa position : le plus souvent une face simple
+        # (dans l'ombre, deux variantes), parfois fissuree ou couverte de mousse, et une fenetre eclairee
+        # (sauf pres de la porte).
+        hasard = (r * 5 + c * 3) % 9
+        loin_de_la_porte = self.porte is None or abs(c - self.porte[1]) > 1
+        if hasard == 0 and loin_de_la_porte:
+            return "mur_clair1"
+        if hasard == 3:
+            return "mur_sombre2"
+        if hasard == 5:
+            return "mur_sombre3"
+        return "mur_sombre" + str((r + c) % 2)
+
     def preparer_fond(self):
         # Dessine une seule fois, au chargement du niveau, tout ce qui ne bouge jamais :
         # herbe, haie, decor, murs et sol. A chaque image, on recopie juste ce fond (bien plus rapide).
@@ -1090,12 +1091,8 @@ class Game:
                 if grille[r][c] == "O":
                     if touche_le_sol(grille, r, c):
                         if est_sol(grille, r + 1, c):
-                            # Du sol juste en dessous : on voit la face du mur (briques), parfois avec une fenetre.
-                            face = "mur" + str(1 + (r + c) % 2)
-                            loin_de_la_porte = self.porte is None or abs(c - self.porte[1]) > 1
-                            if (r * 5 + c * 3) % 7 == 0 and loin_de_la_porte:
-                                face = "mur_fenetre"
-                            self.monde.blit(self.sprites[face], (x, y))
+                            # Du sol juste en dessous : on voit la face du mur (briques).
+                            self.monde.blit(self.sprites[self.choisir_face(grille, r, c)], (x, y))
                         else:
                             # Sinon on ne voit que le dessus du mur (pierres claires).
                             self.monde.blit(self.sprites["mur_cap"], (x, y))
@@ -1104,7 +1101,10 @@ class Game:
                     self.monde.blit(self.sprites["sol" + str(1 + (r * 3 + c * 5) % 2)], (x, y))
                     # Ombre douce du mur au-dessus, a gauche et a droite.
                     if not est_sol(grille, r - 1, c):
-                        self.monde.blit(self.sprites["ombre_nord"], (x, y))
+                        ombre = "ombre_nord"
+                        if est_sol(grille, r - 2, c):
+                            ombre = "ombre_nord_forte"       # le mur au-dessus est dans l'ombre
+                        self.monde.blit(self.sprites[ombre], (x, y))
                     if not est_sol(grille, r, c - 1):
                         self.monde.blit(self.sprites["ombre_ouest"], (x, y))
                     if not est_sol(grille, r, c + 1):

@@ -172,8 +172,8 @@ def test_bfs_resout_tous_les_niveaux():
     # On verifie aussi le cout : ce sont les couts minimaux, confirmes par un autre solveur (log session 13).
     # Les steps (noeuds developpes) sont toujours les memes, car les successeurs sont toujours
     # generes dans le meme ordre : si ces nombres changent, c'est que le BFS a ete modifie.
-    couts_optimaux = [4, 35, 36, 30, 28, 2, 5, 10, 41, 55]
-    steps_attendus = [11, 1806, 6013, 6051, 11659, 3, 12, 571, 2307, 54726]
+    couts_optimaux = [4, 35, 36, 30, 28, 2, 5, 10, 41, 55, 8, 23, 16]
+    steps_attendus = [11, 1806, 6013, 6051, 11659, 3, 12, 571, 2307, 54726, 61, 1014, 39488]
     for i in range(len(LEVELS)):
         niveau = LEVELS[i]
         etat = SokobanPuzzle(niveau["grid"])
@@ -232,11 +232,11 @@ def test_astar_sans_solution():
 def test_astar_resout_tous_les_niveaux():
     # A* avec chacune des 3 heuristiques trouve le meme cout optimal que le BFS, et la solution rejouee mene au but.
     # Steps attendus (noeuds developpes) : si ces nombres changent, c'est que A* ou une heuristique a change.
-    couts_optimaux = [4, 35, 36, 30, 28, 2, 5, 10, 41, 55]
+    couts_optimaux = [4, 35, 36, 30, 28, 2, 5, 10, 41, 55, 8, 23, 16]
     steps_attendus = {
-        "h1": [11, 1827, 5984, 5475, 10190, 3, 15, 606, 2312, 54670],
-        "h2": [8, 1400, 3126, 3023, 2980, 3, 12, 131, 2233, 49669],
-        "h3": [5, 979, 2777, 2577, 2241, 3, 9, 89, 2121, 48442],
+        "h1": [11, 1827, 5984, 5475, 10190, 3, 15, 606, 2312, 54670, 63, 999, 29376],
+        "h2": [8, 1400, 3126, 3023, 2980, 3, 12, 131, 2233, 49669, 25, 638, 1412],
+        "h3": [5, 979, 2777, 2577, 2241, 3, 9, 89, 2121, 48442, 16, 548, 775],
     }
     heuristiques = {"h1": h1, "h2": h2, "h3": h3}
     for nom in heuristiques:
@@ -283,7 +283,7 @@ def test_deadlock_ligne():
 
 def test_astar_deadlock_tous_les_niveaux():
     # AStarDeadlock garde le cout optimal du BFS (il ne perd jamais la solution) et ne developpe pas plus de noeuds.
-    couts_optimaux = [4, 35, 36, 30, 28, 2, 5, 10, 41, 55]
+    couts_optimaux = [4, 35, 36, 30, 28, 2, 5, 10, 41, 55, 8, 23, 16]
     for i in range(len(LEVELS)):
         etat = SokobanPuzzle(LEVELS[i]["grid"])
         sans, steps_sans = AStar(etat, lambda s: s.successorFunction(), lambda s: s.isGoal(), h3)

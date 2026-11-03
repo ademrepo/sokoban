@@ -129,4 +129,45 @@ LEVELS = [
             "OOOOOOOO",
         ],
     },
+        {
+        # 2 caisses, 2 cibles. Les murs intérieurs forcent un détour en hauteur
+        # pour atteindre les cibles en bas à gauche.
+        "name": "Couloir",
+        "grid": [
+            "OOOOOOO",
+            "O R   O",
+            "OOB   O",
+            "OS    O",
+            "OOB   O",
+            "OS    O",
+            "OOOOOOO",
+        ],
+    },
+    {
+        # 2 caisses, 2 cibles. La caisse du haut doit être poussée à droite
+        # puis contourner le verrou intérieur pour rejoindre sa cible.
+        "name": "Verrou",
+        "grid": [
+            "OOOOOOO",
+            "O R   O",
+            "O  B  O",
+            "OOOOB O",
+            "O SS  O",
+            "OOOOOOO",
+        ],
+    },
+    {
+        # 3 caisses en diagonale descendante, 3 cibles alignées au bas.
+        # Pousser dans le bon ordre pour ne pas bloquer les chemins.
+        "name": "Entonnoir",
+        "grid": [
+            "OOOOOOOOO",
+            "O R     O",
+            "O B     O",
+            "O  B    O",
+            "O   B   O",
+            "O  SSS  O",
+            "OOOOOOOOO",
+        ],
+    },
 ]

@@ -140,40 +140,32 @@ def est_coin_deadlock(grid, r, c):
     return mur_vertical and mur_horizontal
 
 
-def segment_sans_cible(grid, r, c, dr, dc, cote_r, cote_c):
-    # Deadlock de ligne (un sens) : la caisse (r, c) est collée à un mur (le mur est du côté
-    # (cote_r, cote_c)). Elle ne peut alors glisser que le long de ce mur, dans la direction (dr, dc)
-    # ou l'opposée. On parcourt toute la ligne de mur dans les deux sens :
+def ligne_de_mur_sans_cible(grid, r, c, mr, mc):
+    # La caisse (r, c) est collee a un mur : le mur est du cote (mr, mc). Elle ne peut alors glisser que le long
+    # de ce mur. On parcourt toute la ligne de mur, dans les deux sens :
     #  - si on trouve une cible, la caisse n'est pas perdue ;
-    #  - si le mur s'arrête (ouverture), la caisse pourrait en sortir : pas perdue ;
-    #  - si on arrive à un mur aux deux bouts sans cible : perdue.
+    #  - si le mur s'arrete (ouverture), la caisse pourrait en sortir : pas perdue ;
+    #  - si on arrive a un mur aux deux bouts sans cible : perdue.
     for sens in (1, -1):
         rr = r
         cc = c
-        while True:
-            if est_mur(grid, rr, cc):
-                break                                   # bout de la ligne : un mur
+        while not est_mur(grid, rr, cc):
             if est_cible(grid, rr, cc):
-                return False                            # une cible sur la ligne
-            if not est_mur(grid, rr + cote_r, cc + cote_c):
-                return False                            # le mur du côté s'arrête : la caisse peut sortir
-            rr = rr + sens * dr
-            cc = cc + sens * dc
+                return False
+            if not est_mur(grid, rr + mr, cc + mc):
+                return False                            # le mur du cote s'arrete : la caisse peut sortir
+            rr = rr + sens * mc                         # on glisse le long du mur (perpendiculaire a (mr, mc))
+            cc = cc + sens * mr
     return True
 
 
 def est_ligne_deadlock(grid, r, c):
-    # Une caisse hors cible collée à un mur, sur une ligne de mur sans aucune cible.
+    # Deadlock de ligne : une caisse hors cible collee a un mur, sur une ligne de mur sans aucune cible.
     if grid[r][c] != "B":
         return False
-    if est_mur(grid, r - 1, c) and segment_sans_cible(grid, r, c, 0, 1, -1, 0):
-        return True                                     # mur au-dessus : la caisse glisse à l'horizontale
-    if est_mur(grid, r + 1, c) and segment_sans_cible(grid, r, c, 0, 1, 1, 0):
-        return True
-    if est_mur(grid, r, c - 1) and segment_sans_cible(grid, r, c, 1, 0, 0, -1):
-        return True                                     # mur à gauche : la caisse glisse à la verticale
-    if est_mur(grid, r, c + 1) and segment_sans_cible(grid, r, c, 1, 0, 0, 1):
-        return True
+    for mr, mc in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+        if est_mur(grid, r + mr, c + mc) and ligne_de_mur_sans_cible(grid, r, c, mr, mc):
+            return True
     return False
 
 

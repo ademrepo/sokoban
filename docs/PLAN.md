@@ -62,6 +62,8 @@ Troisième sujet : détection de deadlock + interface finale (demandé le 2026-1
 
 - [x] Étape 38 — Jack : nouveau sprite `assets/njack.png` (face, dos, marche animée à gauche et à droite, content, queue qui remue) ; l'ancien chat dessiné par code est retiré — 2026-11-03 — docs/logs/2026-11-03_session-08.md
 
+- [x] Étape 39 — Murs variés avec `assets/fwall.png` (simple, fenêtre, fissure, mousse, clair / sombre, ombres plus ou moins fortes) ; relecture du code métier : `solveur.py` (une seule fonction `resoudre` pour main.py et gui.py), détection de ligne de mur simplifiée, tests étendus aux niveaux Couloir, Verrou, Entonnoir — 2026-11-03 — docs/logs/2026-11-03_session-09.md
+
 Correspondance avec les anciens numéros (avant la renumérotation du 2026-10-20, commit `4dc4589`) :
 
 | Nouveau | Ancien | Contenu |

@@ -128,37 +128,42 @@ def load_sprites(taille):
     for nom in ("sol1", "sol2"):
         pygame.draw.rect(sprites[nom], (95, 90, 75), (0, 0, taille, taille), 1)   # fin contour : on voit les cases
 
-    # Murs : blocs de 64x64 de la feuille des murs (dessus clair, briques, bas), 2 variantes.
-    # Eclaircis par code pour rester lisibles sur l'herbe vive.
-    mur = charger_feuille("TX Tileset Wall.png")
-    sprites["mur1"] = decouper(mur, 32, 288, 64, 64, taille)
-    sprites["mur2"] = decouper(mur, 128, 288, 64, 64, taille)
-    for nom in ("mur1", "mur2"):
-        sprites[nom].fill(ECLAIRCIR_MUR, special_flags=pygame.BLEND_RGB_ADD)
+    # Murs : feuille fwall.png (dossier assets/). Rangee du haut = faces de mur eclairees (simple, fenetre, fissure,
+    # mousse), rangee du bas = les memes dans l'ombre (x de chaque type dans x_types).
+    feuille_mur = pygame.image.load(os.path.join(DOSSIER_PROJET, "assets", "fwall.png")).convert_alpha()
+    # On enleve 4 pixels de cadre a gauche et a droite de chaque face pour que les murs voisins se raccordent.
+    x_types = [14, 77, 139, 202]
+    for k in range(4):
+        clair = feuille_mur.subsurface(pygame.Rect(x_types[k] + 4, 26, 41, 53))
+        sombre = feuille_mur.subsurface(pygame.Rect(x_types[k] + 4, 108, 41, 49))
+        sprites["mur_clair" + str(k)] = pygame.transform.smoothscale(clair, (taille, taille))
+        sprites["mur_sombre" + str(k)] = pygame.transform.smoothscale(sombre, (taille, taille))
+        sprites["mur_sombre" + str(k)].fill((22, 19, 14), special_flags=pygame.BLEND_RGB_ADD)    # un peu moins sombre
 
-    # Dessus de mur ("chapeau") : la bande claire du haut des blocs, empilee en 2 rangees decalees (comme des pierres posees).
-    bande = mur.subsurface(pygame.Rect(32, 288, 64, 13))
-    bande = pygame.transform.scale(bande, (taille, taille // 2))
-    chapeau = pygame.Surface((taille, taille))
+    # Dessus de mur : la bande claire du haut des blocs de l'ancienne feuille, empilee en 2 rangees decalees
+    # (comme des pierres posees).
+    mur = charger_feuille("TX Tileset Wall.png")
+    bande = pygame.transform.scale(mur.subsurface(pygame.Rect(32, 288, 64, 13)), (taille, taille // 2))
+    pierres = pygame.Surface((taille, taille))
     for k in range(2):
         decalage = (k % 2) * (taille // 2)
-        chapeau.blit(bande, (decalage, k * (taille // 2)))
-        chapeau.blit(bande, (decalage - taille, k * (taille // 2)))
-    chapeau.fill(ECLAIRCIR_MUR, special_flags=pygame.BLEND_RGB_ADD)
-    sprites["mur_cap"] = chapeau
-    # Mur de brique avec une petite fenetre.
-    sprites["mur_fenetre"] = decouper(mur, 192, 192, 32, 64, taille)
-    sprites["mur_fenetre"].fill(ECLAIRCIR_MUR, special_flags=pygame.BLEND_RGB_ADD)
+        pierres.blit(bande, (decalage, k * (taille // 2)))
+        pierres.blit(bande, (decalage - taille, k * (taille // 2)))
+    pierres.fill(ECLAIRCIR_MUR, special_flags=pygame.BLEND_RGB_ADD)
+    sprites["mur_cap"] = pierres
 
     # Ombres douces posees sur le sol, le long des murs : de plus en plus transparentes en s'eloignant du mur.
+    # Sous un mur dans l'ombre, l'ombre au sol est plus forte (ombre_nord_forte).
     epaisseur = taille // 3
-    sprites["ombre_nord"] = pygame.Surface((taille, epaisseur), pygame.SRCALPHA)
     sprites["ombre_ouest"] = pygame.Surface((epaisseur // 2, taille), pygame.SRCALPHA)
-    for k in range(epaisseur):
-        alpha = int(110 * (1 - k / float(epaisseur)) ** 2)
-        pygame.draw.line(sprites["ombre_nord"], (0, 0, 0, alpha), (0, k), (taille, k))
-        if k < epaisseur // 2:
-            pygame.draw.line(sprites["ombre_ouest"], (0, 0, 0, alpha), (k, 0), (k, taille))
+    for nom, force in (("ombre_nord", 100), ("ombre_nord_forte", 170)):
+        sprites[nom] = pygame.Surface((taille, epaisseur), pygame.SRCALPHA)
+        for k in range(epaisseur):
+            alpha = int(force * (1 - k / float(epaisseur)) ** 2)
+            pygame.draw.line(sprites[nom], (0, 0, 0, alpha), (0, k), (taille, k))
+    for k in range(epaisseur // 2):
+        alpha = int(100 * (1 - k / float(epaisseur)) ** 2)
+        pygame.draw.line(sprites["ombre_ouest"], (0, 0, 0, alpha), (k, 0), (k, taille))
     sprites["ombre_est"] = pygame.transform.flip(sprites["ombre_ouest"], True, False)
 
     props = charger_feuille("TX Props.png")
